@@ -39,6 +39,11 @@ struct WarframeString {
 		buf[15] = 0x0F;
 	}
 
+	inline ~WarframeString()
+	{
+		Free();
+	}
+
 	inline char* GetPtr()
 	{
 		if (buf[15] == 0xFF)
@@ -72,6 +77,8 @@ struct WarframeString {
 
 		return std::string(strbuf, size);
 	}
+
+	void Free();
 };
 
 struct AssetDownloader {

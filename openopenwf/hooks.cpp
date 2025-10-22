@@ -20,6 +20,7 @@ static void (*OLD_SendGetRequest_2)(WarframeString*, void*, void*);
 static void (*OLD_NRSAnalyze)(void*);
 
 static void (*InitStringFromBytes)(WarframeString*, const char*);
+static void (*WFFree)(void*);
 
 #define REQUEST_TYPE_UNCOMPRESSED 0
 #define REQUEST_TYPE_GZIP 1
@@ -29,6 +30,15 @@ static void MakeWarframeString(WarframeString* wfs, const std::string& s)
 {
 	InitStringFromBytes(wfs, std::string(s.size(), ' ').c_str());
 	memcpy(wfs->GetPtr(), s.data(), s.size());
+}
+
+void WarframeString::Free()
+{
+	if (this->buf[15] == 0xFF && ((*(unsigned long long*)(this->buf + 8)) & 0xFFFFFFF0000000ull) != 0xFFFFFFF0000000ull)
+	{
+		WFFree(this->GetPtr());
+		this->buf[15] = 0xF;
+	}
 }
 
 static std::string ReplaceURLHost(const std::string& origURL)
@@ -139,9 +149,7 @@ static void NEW_SendPostRequestUnified(decltype(OLD_SendPostRequest_1) origFunc,
 
 	WarframeString alteredURL;
 	MakeWarframeString(&alteredURL, newURL);
-	return origFunc(a1, &alteredURL, &decryptedData, requestType, a5, a6);
-
-	// TODO: fix memory leak of our new WarframeStrings here
+	origFunc(a1, &alteredURL, &decryptedData, requestType, a5, a6);
 }
 
 static void NEW_SendPostRequest_1(void* a1, WarframeString* url, WarframeString* bodyData, char requestType, void* a5, void* a6)
@@ -165,8 +173,6 @@ static void NEW_SendGetRequestUnified(decltype(OLD_SendGetRequest_1) origFunc, W
 	WarframeString alteredURL;
 	MakeWarframeString(&alteredURL, newURL);
 	return origFunc(&alteredURL, a2, a3);
-
-	// TODO: fix memory leak of our new WarframeString here
 }
 
 static void NEW_SendGetRequest_1(WarframeString* url, void* a2, void* a3)
@@ -181,14 +187,8 @@ static void NEW_SendGetRequest_2(WarframeString* url, void* a2, void* a3)
 
 static int NEW_DownloadManifest(void* a1, void* a2, void* a3, void* a4, void* a5, void* a6)
 {
-	static bool firstCall = true;
-	if (firstCall)
-	{
-		OWFLog("[Debug] H.Cache request ignored");
-		return 0;
-	}
-
-	return OLD_DownloadManifest(a1, a2, a3, a4, a5, a6);
+	OWFLog("[Debug] H.Cache request ignored");
+	return 0;
 }
 
 static void NEW_NRSAnalyze(void* a1)
@@ -279,6 +279,12 @@ void PlaceHooks()
 	initStringFromBytesSig += *(int*)initStringFromBytesSig;
 	initStringFromBytesSig += 4;
 	InitStringFromBytes = (decltype(InitStringFromBytes))initStringFromBytesSig;
+
+	unsigned char* wfFreeSig = SignatureScanMustSucceed<true>("\x48\x8B\x4C\x24\x00\x48\x85\xC9\x74\x05\xE8", "xxxx?xxxxxx", imageBase, 40000000, "WFFree");
+	wfFreeSig += 11;
+	wfFreeSig += *(int*)wfFreeSig;
+	wfFreeSig += 4;
+	WFFree = (decltype(WFFree))wfFreeSig;
 
 	// NRS analysis (will fail if no NRS server is present)
 	unsigned char* nrsAnalyzeSig = SignatureScanMustSucceed("\x48\x33\xC4\x48\x89\x85\x00\x00\x00\x00\x83\xB9\x00\x00\x00\x00\x01\x4C\x8B\xE9\x75", "xxxxxx??xxxx??xxxxxxx", imageBase, 40000000, "NRSAnalyze");
