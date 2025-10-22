@@ -15,3 +15,6 @@ OpenWF Enabler uses the [same configuration file and format](https://openwf.io/b
 ## Notes
 - If you're using the standard version of OpenWF bootstrapper, you must remove it before using OpenWF Enabler. You cannot use both redirectors simultaneously.
 - This project, for the time being, ONLY supports request redirection. Other features such as scripting, metadata patching, or content replacement are not supported.
+
+## Screenshots
+<img width="544" height="202" alt="untitled" src="https://github.com/user-attachments/assets/c40de05c-00ae-472b-9a0e-f0d954385007" />
