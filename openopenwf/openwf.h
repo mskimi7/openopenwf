@@ -24,6 +24,7 @@ std::string WideToUTF8(const std::wstring& s);
 
 struct OpenWFConfig {
 	std::string serverHost = "127.0.0.1";
+	bool disableNRS = true;
 
 	void PrintToConsole();
 };

@@ -10,13 +10,15 @@ void OpenWFConfig::PrintToConsole()
 {
 	OWFLog("===== OpenWF Enabler config =====");
 	OWFLog("  serverHost = {}", g_Config.serverHost);
+	OWFLog("  disableNRS = {}", g_Config.disableNRS);
 	OWFLog("");
 }
 
 static void ParseConfig(const json& j)
 {
 	OpenWFConfig newConfig;
-	newConfig.serverHost = j.value<std::string>("server_host", "127.0.0.1");
+	newConfig.serverHost = j.value<std::string>("server_host", g_Config.serverHost);
+	newConfig.disableNRS = j.value<bool>("disable_nrs_connection", g_Config.disableNRS);
 
 	g_Config = newConfig;
 }

@@ -17,6 +17,7 @@ static void (*OLD_SendPostRequest_1)(void*, WarframeString*, WarframeString*, ch
 static void (*OLD_SendPostRequest_2)(void*, WarframeString*, WarframeString*, char, void*, void*);
 static void (*OLD_SendGetRequest_1)(WarframeString*, void*, void*);
 static void (*OLD_SendGetRequest_2)(WarframeString*, void*, void*);
+static void (*OLD_NRSAnalyze)(void*);
 
 static void (*InitStringFromBytes)(WarframeString*, const char*);
 
@@ -190,6 +191,12 @@ static int NEW_DownloadManifest(void* a1, void* a2, void* a3, void* a4, void* a5
 	return OLD_DownloadManifest(a1, a2, a3, a4, a5, a6);
 }
 
+static void NEW_NRSAnalyze(void* a1)
+{
+	if (!g_Config.disableNRS)
+		OLD_NRSAnalyze(a1);
+}
+
 template <bool MultipleResultsAllowed = false>
 static unsigned char* SignatureScanMustSucceed(const char* pattern, const char* mask, unsigned char* data, size_t length, const char* description)
 {
@@ -272,6 +279,11 @@ void PlaceHooks()
 	initStringFromBytesSig += *(int*)initStringFromBytesSig;
 	initStringFromBytesSig += 4;
 	InitStringFromBytes = (decltype(InitStringFromBytes))initStringFromBytesSig;
+
+	// NRS analysis (will fail if no NRS server is present)
+	unsigned char* nrsAnalyzeSig = SignatureScanMustSucceed("\x48\x33\xC4\x48\x89\x85\x00\x00\x00\x00\x83\xB9\x00\x00\x00\x00\x01\x4C\x8B\xE9\x75", "xxxxxx??xxxx??xxxxxxx", imageBase, 40000000, "NRSAnalyze");
+	nrsAnalyzeSig = (unsigned char*)(((ULONG_PTR)nrsAnalyzeSig - 0x15) & 0xFFFFFFFFFFFFFFF0);
+	MH_CreateHook(nrsAnalyzeSig, NEW_NRSAnalyze, (LPVOID*)&OLD_NRSAnalyze);
 
 	MH_EnableHook(MH_ALL_HOOKS);
 }
