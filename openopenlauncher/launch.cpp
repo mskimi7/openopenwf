@@ -31,8 +31,32 @@ static unsigned char injectedCode[] = {
 	0x00, 0x00, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC, 0xCC
 };
 
+static bool TestForBootstrapperFile(HWND mainWindow, const std::wstring& fullFilePath)
+{
+	if (FileExists(fullFilePath.c_str()))
+	{
+		std::wstring msg = std::format(L"A sideloaded DLL has been detected in the Warframe folder. If that is the OpenWF bootstrapper, you must delete it, otherwise the game will crash.\n\nPlease delete the following file:\n{}\n\nContinue loading Warframe anyway?", fullFilePath);
+		if (MessageBoxW(mainWindow, msg.c_str(), L"OpenWF Enabler", MB_YESNOCANCEL | MB_ICONWARNING) != IDYES)
+			return false;
+	}
+
+	return true;
+}
+
 bool LaunchWarframe(HWND mainWindow, const std::wstring& wfExePath, const std::wstring& dllPath, const std::wstring& commandLineArgs)
 {
+	LPWSTR fileNamePtr = PathFindFileNameW(wfExePath.c_str());
+	if (fileNamePtr == nullptr || fileNamePtr == wfExePath.c_str())
+		return true;
+
+	std::wstring wfDir = wfExePath.substr(0, fileNamePtr - wfExePath.c_str());
+
+	if (!TestForBootstrapperFile(mainWindow, wfDir + L"wtsapi32.dll"))
+		return false;
+
+	if (!TestForBootstrapperFile(mainWindow, wfDir + L"dwmapi.dll"))
+		return false;
+
 	std::wstring commandLine = wfExePath;
 
 	// wrap in quotation marks in case path contains spaces
@@ -49,7 +73,7 @@ bool LaunchWarframe(HWND mainWindow, const std::wstring& wfExePath, const std::w
 
 	si.cb = sizeof(si);
 
-	BOOL result = CreateProcessW(nullptr, commandLine.data(), nullptr, nullptr, FALSE, CREATE_SUSPENDED, nullptr, nullptr, &si, &pi);
+	BOOL result = CreateProcessW(nullptr, commandLine.data(), nullptr, nullptr, FALSE, CREATE_SUSPENDED, nullptr, wfDir.c_str(), &si, &pi);
 	if (!result)
 	{
 		MessageBoxW(mainWindow, std::format(L"CreateProcess failed (error {})\nAre you sure the Warframe path is correct?", GetLastError()).c_str(), L"OpenWF Enabler", MB_OK | MB_ICONERROR);
@@ -59,6 +83,10 @@ bool LaunchWarframe(HWND mainWindow, const std::wstring& wfExePath, const std::w
 	LPVOID wfPathMem = VirtualAllocEx(pi.hProcess, nullptr, 0x1000, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
 	if (!wfPathMem)
 	{
+		TerminateProcess(pi.hProcess, 0);
+		CloseHandle(pi.hThread);
+		CloseHandle(pi.hProcess);
+
 		MessageBoxW(mainWindow, std::format(L"VirtualAllocEx failed (error {})\nTry running the OpenWF Enabler as administrator.", GetLastError()).c_str(), L"OpenWF Enabler", MB_OK | MB_ICONERROR);
 		return false;
 	}
@@ -74,6 +102,10 @@ bool LaunchWarframe(HWND mainWindow, const std::wstring& wfExePath, const std::w
 	HANDLE hInjectedThread = CreateRemoteThread(pi.hProcess, nullptr, 0, (LPTHREAD_START_ROUTINE)wfPathMem, nullptr, 0, nullptr);
 	if (!hInjectedThread)
 	{
+		TerminateProcess(pi.hProcess, 0);
+		CloseHandle(pi.hThread);
+		CloseHandle(pi.hProcess);
+
 		MessageBoxW(mainWindow, std::format(L"CreateRemoteThread failed (error {})\nTry running the OpenWF Enabler as administrator.", GetLastError()).c_str(), L"OpenWF Enabler", MB_OK | MB_ICONERROR);
 		return false;
 	}

@@ -1,17 +1,5 @@
 #include "openwf.h"
 
-static BOOL FileExists(LPCWSTR szPath)
-{
-	DWORD dwAttrib = GetFileAttributesW(szPath);
-	return (dwAttrib != INVALID_FILE_ATTRIBUTES && !(dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
-}
-
-static BOOL DirectoryExists(LPCWSTR szPath)
-{
-	DWORD dwAttrib = GetFileAttributesW(szPath);
-	return (dwAttrib != INVALID_FILE_ATTRIBUTES && (dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
-}
-
 // Tests if a Warframe path is valid. Argument: fully qualified path to Warframe.x64.exe.
 // A path is valid if:
 //   1. Warframe.x64.exe exists
