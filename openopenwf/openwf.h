@@ -9,6 +9,9 @@
 #include <format>
 #include <vector>
 
+#include "game_data/warframe_string.h"
+#include "game_data/object_type_names.h"
+
 // In case we need to unload the DLL.
 inline HINSTANCE g_hInstDll;
 
@@ -16,8 +19,6 @@ inline char* g_entryPointAddress;
 inline DWORD g_entryPointOldProtect;
 
 inline std::wstring g_wfExeDirectory;
-
-std::vector<unsigned char*> SignatureScan(const char* pattern, const char* mask, unsigned char* data, size_t length);
 
 std::wstring UTF8ToWide(const std::string& s);
 std::string WideToUTF8(const std::wstring& s);
@@ -31,56 +32,6 @@ struct OpenWFConfig {
 
 inline OpenWFConfig g_Config;
 
-struct WarframeString {
-	unsigned char buf[16] = { 0 };
-
-	inline WarframeString()
-	{
-		buf[15] = 0x0F;
-	}
-
-	inline ~WarframeString()
-	{
-		Free();
-	}
-
-	inline char* GetPtr()
-	{
-		if (buf[15] == 0xFF)
-			return *(char**)buf;
-
-		return (char*)buf;
-	}
-
-	inline size_t GetSize() const
-	{
-		if (buf[15] == 0xFF)
-			return *(unsigned int*)(buf + 8) & 0xFFFFFFF;
-
-		return 15 - buf[15];
-	}
-
-	inline std::string GetText() const
-	{
-		const char* strbuf = (const char*)buf;
-		int size;
-
-		if (buf[15] == 0xFF)
-		{
-			strbuf = *(const char**)strbuf;
-			size = *(int*)(buf + 8) & 0xFFFFFFF;
-		}
-		else
-		{
-			size = 15 - buf[15];
-		}
-
-		return std::string(strbuf, size);
-	}
-
-	void Free();
-};
-
 struct AssetDownloader {
 	inline WarframeString* GetCacheManifestHash() { return (WarframeString*)((char*)this + 0x1F0); }
 };
@@ -88,20 +39,12 @@ struct AssetDownloader {
 inline AssetDownloader** g_AssetDownloaderPtr;
 inline const char* g_BuildLabelStringPtr;
 
-inline std::string OWFGetBuildLabel()
-{
-	std::string fullBuildLabel = g_BuildLabelStringPtr;
-	size_t spaceIndex = fullBuildLabel.find(' ');
-	if (spaceIndex == std::string::npos)
-		return fullBuildLabel;
-
-	return fullBuildLabel.substr(0, spaceIndex);
-}
+std::vector<unsigned char*> SignatureScan(const char* pattern, const char* mask, unsigned char* data, size_t length);
+std::string AESDecrypt(const std::string& inputData, const std::string& key, const std::string& iv);
 
 void LoadConfig();
 void PlaceHooks();
-
-std::string AESDecrypt(const std::string& inputData, const std::string& key, const std::string& iv);
+std::string OWFGetBuildLabel();
 
 void OpenWFLog(const std::string& message);
 #define OWFLog(fmt, ...) OpenWFLog(std::format(fmt, __VA_ARGS__))

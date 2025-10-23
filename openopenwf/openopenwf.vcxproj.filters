@@ -68,5 +68,11 @@
     <ClInclude Include="json.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="game_data\warframe_string.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="game_data\object_type_names.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

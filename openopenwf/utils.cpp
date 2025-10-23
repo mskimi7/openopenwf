@@ -18,6 +18,16 @@ __declspec(noreturn) void OpenWFFatalExit(const std::string& reason, const std::
 	ExitProcess(1);
 }
 
+std::string OWFGetBuildLabel()
+{
+	std::string fullBuildLabel = g_BuildLabelStringPtr;
+	size_t spaceIndex = fullBuildLabel.find(' ');
+	if (spaceIndex == std::string::npos)
+		return fullBuildLabel;
+
+	return fullBuildLabel.substr(0, spaceIndex);
+}
+
 std::wstring UTF8ToWide(const std::string& s)
 {
 	int wideLen = MultiByteToWideChar(CP_UTF8, 0, s.c_str(), (int)s.size(), nullptr, 0);

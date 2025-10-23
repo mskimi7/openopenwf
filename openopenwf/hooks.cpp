@@ -286,10 +286,17 @@ void PlaceHooks()
 	wfFreeSig += 4;
 	WFFree = (decltype(WFFree))wfFreeSig;
 
-	// NRS analysis (will fail if no NRS server is present)
+	// NRS analysis (analysis always fails in OpenWF since an NRS server is not available.. yet)
 	unsigned char* nrsAnalyzeSig = SignatureScanMustSucceed("\x48\x33\xC4\x48\x89\x85\x00\x00\x00\x00\x83\xB9\x00\x00\x00\x00\x01\x4C\x8B\xE9\x75", "xxxxxx??xxxx??xxxxxxx", imageBase, 40000000, "NRSAnalyze");
 	nrsAnalyzeSig = (unsigned char*)(((ULONG_PTR)nrsAnalyzeSig - 0x15) & 0xFFFFFFFFFFFFFFF0);
 	MH_CreateHook(nrsAnalyzeSig, NEW_NRSAnalyze, (LPVOID*)&OLD_NRSAnalyze);
+
+	// name mappings for object types (these are stored in contiguous memory blocks and referenced using a pseudo-index)
+	unsigned char* typeNameMappingSig = SignatureScanMustSucceed<true>("\x48\x8B\xF9\x48\x8B\x05", "xxxxxx", imageBase, 40000000, "TypeNameMapping");
+	typeNameMappingSig += 6;
+	typeNameMappingSig += *(int*)typeNameMappingSig;
+	typeNameMappingSig += 4;
+	g_ObjTypeNameMapping = (ObjectTypeNameMapping*)typeNameMappingSig;
 
 	MH_EnableHook(MH_ALL_HOOKS);
 }

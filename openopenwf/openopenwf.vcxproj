@@ -90,6 +90,7 @@
     <ClCompile Include="utils.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="game_data\object_type_names.h" />
     <ClInclude Include="json.hpp" />
     <ClInclude Include="minhook\buffer.h" />
     <ClInclude Include="minhook\hde\hde64.h" />
@@ -97,6 +98,7 @@
     <ClInclude Include="minhook\hde\table64.h" />
     <ClInclude Include="minhook\MinHook.h" />
     <ClInclude Include="minhook\trampoline.h" />
+    <ClInclude Include="game_data\warframe_string.h" />
     <ClInclude Include="openwf.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
