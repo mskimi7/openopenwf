@@ -8,7 +8,7 @@ static decltype(&WinHttpConnect) OLD_WinHttpConnect;
 static decltype(&connect) OLD_connect;
 static decltype(&getaddrinfo) OLD_getaddrinfo;
 static decltype(&GetAddrInfoExW) OLD_GetAddrInfoExW;
-static int (*OLD_DownloadManifest)(void*, void*, void*, void*, void*, void*);
+static int (*OLD_DownloadManifest)(AssetDownloader*, void*, void*, void*, void*, void*);
 static int (*OLD_X509_verify_cert)(void*);
 static long long (*OLD_Curl_ossl_verifyhost)(void*, void*, void*, void*);
 static int (*OLD_WorldStateVerify)(void*, void*);
@@ -18,6 +18,7 @@ static void (*OLD_SendPostRequest_2)(void*, WarframeString*, WarframeString*, ch
 static void (*OLD_SendGetRequest_1)(WarframeString*, void*, void*);
 static void (*OLD_SendGetRequest_2)(WarframeString*, void*, void*);
 static void (*OLD_NRSAnalyze)(void*);
+static void* (*OLD_ResourceMgr_Ctor)(ResourceMgr*);
 
 static void (*InitStringFromBytes)(WarframeString*, const char*);
 static void (*WFFree)(void*);
@@ -145,7 +146,7 @@ static void NEW_SendPostRequestUnified(decltype(OLD_SendPostRequest_1) origFunc,
 	}
 
 	if (newURL.find("login.php") != std::string::npos)
-		newURL += std::format("&buildLabel={}/{}&clientMod=openopenwf_1", OWFGetBuildLabel(), (*g_AssetDownloaderPtr)->GetCacheManifestHash()->GetText());
+		newURL += std::format("&buildLabel={}/{}&clientMod=openopenwf_1", OWFGetBuildLabel(), AssetDownloader::Instance->GetCacheManifestHash()->GetText());
 
 	WarframeString alteredURL;
 	MakeWarframeString(&alteredURL, newURL);
@@ -168,7 +169,7 @@ static void NEW_SendGetRequestUnified(decltype(OLD_SendGetRequest_1) origFunc, W
 	OWFLog("[GET] {}", url->GetText());
 
 	if (newURL.find("worldState.php") != std::string::npos)
-		newURL += std::format("?buildLabel={}/{}", OWFGetBuildLabel(), (*g_AssetDownloaderPtr)->GetCacheManifestHash()->GetText());
+		newURL += std::format("?buildLabel={}/{}", OWFGetBuildLabel(), AssetDownloader::Instance->GetCacheManifestHash()->GetText());
 
 	WarframeString alteredURL;
 	MakeWarframeString(&alteredURL, newURL);
@@ -185,9 +186,9 @@ static void NEW_SendGetRequest_2(WarframeString* url, void* a2, void* a3)
 	return NEW_SendGetRequestUnified(OLD_SendGetRequest_2, url, a2, a3);
 }
 
-static int NEW_DownloadManifest(void* a1, void* a2, void* a3, void* a4, void* a5, void* a6)
+static int NEW_DownloadManifest(AssetDownloader* a1, void* a2, void* a3, void* a4, void* a5, void* a6)
 {
-	OWFLog("[Debug] H.Cache request ignored");
+	AssetDownloader::Instance = a1;
 	return 0;
 }
 
@@ -195,6 +196,14 @@ static void NEW_NRSAnalyze(void* a1)
 {
 	if (!g_Config.disableNRS)
 		OLD_NRSAnalyze(a1);
+}
+
+static void* NEW_ResourceMgr_Ctor(ResourceMgr* resourceMgr)
+{
+	OWFLog("[DEBUG] ResourceMgr = {}", (void*)resourceMgr);
+
+	ResourceMgr::Instance = resourceMgr;
+	return OLD_ResourceMgr_Ctor(resourceMgr);
 }
 
 template <bool MultipleResultsAllowed = false>
@@ -261,17 +270,16 @@ void PlaceHooks()
 	MH_CreateHook((char*)(((ULONG_PTR)sendGetRequest[0] - 0x23) & 0xFFFFFFFFFFFFFFF0), NEW_SendGetRequest_1, (LPVOID*)&OLD_SendGetRequest_1);
 	MH_CreateHook((char*)(((ULONG_PTR)sendGetRequest[1] - 0x23) & 0xFFFFFFFFFFFFFFF0), NEW_SendGetRequest_2, (LPVOID*)&OLD_SendGetRequest_2);
 
+	// constructor for ResourceMgr
+	unsigned char* resourceMgrCtor = SignatureScanMustSucceed("\x80\x61\x58\x80\x48\x8D\x05", "xxxxxxx", imageBase, 40000000, "ResourceMgr::ctor");
+	resourceMgrCtor = (unsigned char*)(((ULONG_PTR)resourceMgrCtor - 5) & 0xFFFFFFFFFFFFFFF0);
+	MH_CreateHook(resourceMgrCtor, NEW_ResourceMgr_Ctor, (LPVOID*)&OLD_ResourceMgr_Ctor);
+
 	unsigned char* buildLabelSig = SignatureScanMustSucceed("\x80\x3D\x00\x00\x00\x00\x00\x0F\x85\x00\x00\x00\x00\xE8\x00\x00\x00\x00\x48\x8B\xD8\x48\x85\xC0", "xx????xxx??xxx????xxxxxx", imageBase, 40000000, "BuildLabelString");
 	buildLabelSig += 2;
 	buildLabelSig += *(int*)buildLabelSig;
 	buildLabelSig += 5;
 	g_BuildLabelStringPtr = (const char*)buildLabelSig;
-
-	unsigned char* assetDownloaderSig = SignatureScanMustSucceed("\x80\x3D\x00\x00\x00\x00\x00\x75\x00\x80\x3D\x00\x00\x00\x00\x00\x74\x00\x48\x8B\x05\x00\x00\x00\x00", "xx????xx?xx????xx?xxx????", imageBase, 40000000, "AssetDownloader");
-	assetDownloaderSig += 0x15;
-	assetDownloaderSig += *(int*)assetDownloaderSig;
-	assetDownloaderSig += 4;
-	g_AssetDownloaderPtr = (AssetDownloader**)assetDownloaderSig;
 
 	unsigned char* initStringFromBytesSig = SignatureScanMustSucceed<true>("\x48\x8D\x15\x00\x00\x00\x00\x48\x8D\x0D\x00\x00\x00\x00\xE8\x00\x00\x00\x00\x48\x8D\x15\x00\x00\x00\x00\x48\x8D\x0D\x00\x00\x00\x00\xE8\x00\x00\x00\x00\x48\x8D\x15\x00\x00\x00\x00\x48\x8D\x0D\x00\x00\x00\x00\xE8\x00\x00\x00\x00\x48\x8D\x15\x00\x00\x00\x00\x48\x8D\x0D\x00\x00\x00\x00\xE8\x00\x00\x00\x00\x48\x8D\x15\x00\x00\x00\x00\x48\x8D\x0D\x00\x00\x00\x00\xE8\x00\x00\x00\x00\x48\x8D\x15\x00\x00\x00\x00\x48\x8D\x0D\x00\x00\x00\x00\xE8\x00\x00\x00\x00\x48\x8D\x15\x00\x00\x00\x00\x48\x8D\x0D\x00\x00\x00\x00\xE8\x00\x00\x00\x00\x48\x8D\x15\x00\x00\x00\x00\x48\x8D\x0D\x00\x00\x00\x00\xE8\x00\x00\x00\x00",
 		"xxx????xxx????x????xxx????xxx????x????xxx????xxx????x????xxx????xxx????x????xxx????xxx????x????xxx????xxx????x????xxx????xxx????x????xxx????xxx????x????", imageBase, 40000000, "InitStringFromBytes");

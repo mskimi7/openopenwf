@@ -91,6 +91,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="game_data\object_type_names.h" />
+    <ClInclude Include="game_data\resources.h" />
     <ClInclude Include="json.hpp" />
     <ClInclude Include="minhook\buffer.h" />
     <ClInclude Include="minhook\hde\hde64.h" />

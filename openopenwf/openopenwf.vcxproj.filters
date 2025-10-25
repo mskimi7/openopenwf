@@ -74,5 +74,8 @@
     <ClInclude Include="game_data\object_type_names.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="game_data\resources.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
