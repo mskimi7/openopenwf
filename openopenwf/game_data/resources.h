@@ -19,8 +19,8 @@ struct ObjectSmartPtr {
 };
 
 struct Resource {
-	ObjectSmartPtr* resourcePtr;
-	unsigned char unk[64] = { 0 }; // idk how big the struct actually is, so let's just allocate enough memory to prevent stack corruption
+	ObjectSmartPtr* resourcePtr = nullptr;
+	ObjectType* type = nullptr;
 };
 
 typedef void(*AcquireResourceByString_t)(ResourceMgr* resMgr, Resource* outType, WarframeString* objectName, ObjectType* requestedObjectType);
@@ -45,4 +45,8 @@ struct ResourceMgr {
 
 	void LoadResource(const std::string& fullName);
 	static inline ResourceMgr* Instance;
+};
+
+struct TypeMgr {
+
 };

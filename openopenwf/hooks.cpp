@@ -20,9 +20,6 @@ static void (*OLD_SendGetRequest_2)(WarframeString*, void*, void*);
 static void (*OLD_NRSAnalyze)(void*);
 static void* (*OLD_ResourceMgr_Ctor)(ResourceMgr*);
 
-static void (*InitStringFromBytes)(WarframeString*, const char*);
-static void (*WFFree)(void*);
-
 #define REQUEST_TYPE_UNCOMPRESSED 0
 #define REQUEST_TYPE_GZIP 1
 #define REQUEST_TYPE_GZIP_PROTECTED 2
@@ -127,7 +124,7 @@ static int NEW_rsa_ossl_public_encrypt(int flen, unsigned char* from, unsigned c
 static void NEW_SendPostRequestUnified(decltype(OLD_SendPostRequest_1) origFunc, void* a1, WarframeString* url, WarframeString* bodyData, char requestType, void* a5, void* a6)
 {
 	//ResourceMgr::Instance->LoadResource("/EE/Types/Engine/nonexistent.fbx");
-	//ResourceMgr::Instance->LoadResource("/Lotus/Videos/OnLyneMV.bk2");
+	ResourceMgr::Instance->LoadResource("/Lotus/Types/Game/Decorations/HelminthMemDeco");
 	//ResourceMgr::Instance->LoadResource("/Lotus/Videos/OnLyneMV_s.bk2");
 
 	WarframeString decryptedData;
@@ -204,8 +201,6 @@ static void NEW_NRSAnalyze(void* a1)
 
 static void* NEW_ResourceMgr_Ctor(ResourceMgr* resourceMgr)
 {
-	OWFLog("[DEBUG] ResourceMgr = {}", (void*)resourceMgr);
-
 	ResourceMgr::Instance = resourceMgr;
 	return OLD_ResourceMgr_Ctor(resourceMgr);
 }
@@ -316,6 +311,18 @@ void PlaceHooks()
 	baseObjectPtr += *(int*)baseObjectPtr;
 	baseObjectPtr += 4;
 	g_BaseType = (ObjectType*)baseObjectPtr;
+
+	unsigned char* typeMgrPtr = SignatureScanMustSucceed("\xE8\x00\x00\x00\x00\x41\xB9\x03\x00\x00\x21\x4C\x8D\x45\x00\x49\x00\x00\x48\x00\x00\xE8", "x????xxxxxxxxx?x??x??x", imageBase, 40000000, "TypeMgr");
+	unsigned char* getPropertyTextPtr = typeMgrPtr;
+	typeMgrPtr += 1;
+	typeMgrPtr += *(int*)typeMgrPtr;
+	typeMgrPtr += 4;
+	GetTypeMgr = (decltype(GetTypeMgr))typeMgrPtr;
+
+	getPropertyTextPtr += 22;
+	getPropertyTextPtr += *(int*)getPropertyTextPtr;
+	getPropertyTextPtr += 4;
+	GetPropertyText = (decltype(GetPropertyText))getPropertyTextPtr;
 
 	MH_EnableHook(MH_ALL_HOOKS);
 }

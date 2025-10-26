@@ -12,4 +12,9 @@ void ResourceMgr::LoadResource(const std::string& fullName)
 	resName.Create(fullName);
 
 	ResourceMgr::Instance->vtable->AcquireResourceByString(this, &res, &resName, g_BaseType);
+
+	WarframeString propertyText;
+	GetPropertyText(GetTypeMgr(), res.type, &propertyText, 0x41000003);
+
+	OWFLog("{}", propertyText.GetText());
 }

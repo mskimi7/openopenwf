@@ -55,3 +55,8 @@ void OpenWFLog(const std::string& message);
 
 __declspec(noreturn) void OpenWFFatalExit(const std::string& reason, const std::string& func, const std::string& file, int line);
 #define FATAL_EXIT(s) OpenWFFatalExit(s, __FUNCTION__, __FILE__, __LINE__)
+
+inline void (*InitStringFromBytes)(WarframeString*, const char*);
+inline void (*WFFree)(void*);
+inline TypeMgr* (*GetTypeMgr)();
+inline void (*GetPropertyText)(TypeMgr*, ObjectType*, WarframeString*, int);
