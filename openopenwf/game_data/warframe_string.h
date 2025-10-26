@@ -49,5 +49,6 @@ struct WarframeString {
 		return std::string(strbuf, size);
 	}
 
+	void Create(const std::string& data);
 	void Free();
 };

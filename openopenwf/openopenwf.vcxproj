@@ -80,6 +80,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="config.cpp" />
+    <ClCompile Include="game_data\resources.cpp" />
     <ClCompile Include="hooks.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="minhook\buffer.c" />

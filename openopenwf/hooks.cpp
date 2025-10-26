@@ -27,10 +27,10 @@ static void (*WFFree)(void*);
 #define REQUEST_TYPE_GZIP 1
 #define REQUEST_TYPE_GZIP_PROTECTED 2
 
-static void MakeWarframeString(WarframeString* wfs, const std::string& s)
+void WarframeString::Create(const std::string& data)
 {
-	InitStringFromBytes(wfs, std::string(s.size(), ' ').c_str());
-	memcpy(wfs->GetPtr(), s.data(), s.size());
+	InitStringFromBytes(this, std::string(data.size(), ' ').c_str());
+	memcpy(this->GetPtr(), data.data(), data.size());
 }
 
 void WarframeString::Free()
@@ -126,6 +126,10 @@ static int NEW_rsa_ossl_public_encrypt(int flen, unsigned char* from, unsigned c
 
 static void NEW_SendPostRequestUnified(decltype(OLD_SendPostRequest_1) origFunc, void* a1, WarframeString* url, WarframeString* bodyData, char requestType, void* a5, void* a6)
 {
+	//ResourceMgr::Instance->LoadResource("/EE/Types/Engine/nonexistent.fbx");
+	//ResourceMgr::Instance->LoadResource("/Lotus/Videos/OnLyneMV.bk2");
+	//ResourceMgr::Instance->LoadResource("/Lotus/Videos/OnLyneMV_s.bk2");
+
 	WarframeString decryptedData;
 	std::string newURL = ReplaceURLHost(url->GetText());
 
@@ -135,7 +139,7 @@ static void NEW_SendPostRequestUnified(decltype(OLD_SendPostRequest_1) origFunc,
 	{
 		if (bodyData->GetSize() > 137) // first byte is some index; subsequent 128 bytes is the RSA-encrypted AES key which we have overwritten; then 8 bytes of useless CRC
 		{
-			MakeWarframeString(&decryptedData, AESDecrypt(bodyData->GetText().substr(137), "AAAAAAAAAAAAAAAAAAAAAAAA", "AAAAAAAAAAAAAAAA"));
+			decryptedData.Create(AESDecrypt(bodyData->GetText().substr(137), "AAAAAAAAAAAAAAAAAAAAAAAA", "AAAAAAAAAAAAAAAA"));
 			bodyData = &decryptedData;
 			requestType = REQUEST_TYPE_GZIP;
 		}
@@ -149,7 +153,7 @@ static void NEW_SendPostRequestUnified(decltype(OLD_SendPostRequest_1) origFunc,
 		newURL += std::format("&buildLabel={}/{}&clientMod=openopenwf_1", OWFGetBuildLabel(), AssetDownloader::Instance->GetCacheManifestHash()->GetText());
 
 	WarframeString alteredURL;
-	MakeWarframeString(&alteredURL, newURL);
+	alteredURL.Create(newURL);
 	origFunc(a1, &alteredURL, &decryptedData, requestType, a5, a6);
 }
 
@@ -172,7 +176,7 @@ static void NEW_SendGetRequestUnified(decltype(OLD_SendGetRequest_1) origFunc, W
 		newURL += std::format("?buildLabel={}/{}", OWFGetBuildLabel(), AssetDownloader::Instance->GetCacheManifestHash()->GetText());
 
 	WarframeString alteredURL;
-	MakeWarframeString(&alteredURL, newURL);
+	alteredURL.Create(newURL);
 	return origFunc(&alteredURL, a2, a3);
 }
 
@@ -305,6 +309,13 @@ void PlaceHooks()
 	typeNameMappingSig += *(int*)typeNameMappingSig;
 	typeNameMappingSig += 4;
 	g_ObjTypeNameMapping = (ObjectTypeNameMapping*)typeNameMappingSig;
+
+	// pointer to /EE/Types/Base/Object
+	unsigned char* baseObjectPtr = SignatureScanMustSucceed("\x48\x89\x45\xD7\x00\xFF\xD1\x4C\x8D\x05", "xxxx?xxxxx", imageBase, 40000000, "BaseObjectPtr");
+	baseObjectPtr += 10;
+	baseObjectPtr += *(int*)baseObjectPtr;
+	baseObjectPtr += 4;
+	g_BaseType = (ObjectType*)baseObjectPtr;
 
 	MH_EnableHook(MH_ALL_HOOKS);
 }
