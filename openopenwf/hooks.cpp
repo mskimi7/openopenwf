@@ -8,6 +8,7 @@ static decltype(&WinHttpConnect) OLD_WinHttpConnect;
 static decltype(&connect) OLD_connect;
 static decltype(&getaddrinfo) OLD_getaddrinfo;
 static decltype(&GetAddrInfoExW) OLD_GetAddrInfoExW;
+static void* (*OLD_GameUpdate)(void*);
 static int (*OLD_DownloadManifest)(AssetDownloader*, void*, void*, void*, void*, void*);
 static int (*OLD_X509_verify_cert)(void*);
 static long long (*OLD_Curl_ossl_verifyhost)(void*, void*, void*, void*);
@@ -187,6 +188,12 @@ static void NEW_SendGetRequest_2(WarframeString* url, void* a2, void* a3)
 	return NEW_SendGetRequestUnified(OLD_SendGetRequest_2, url, a2, a3);
 }
 
+static void* NEW_GameUpdate(void* a1)
+{
+	OWFLog("GameUpdate");
+	return OLD_GameUpdate(a1);
+}
+
 static int NEW_DownloadManifest(AssetDownloader* a1, void* a2, void* a3, void* a4, void* a5, void* a6)
 {
 	AssetDownloader::Instance = a1;
@@ -231,6 +238,11 @@ void PlaceHooks()
 	MH_CreateHookApi(L"ws2_32.dll", "getaddrinfo", NEW_getaddrinfo, (LPVOID*)&OLD_getaddrinfo);
 	MH_CreateHookApi(L"ws2_32.dll", "GetAddrInfoExW", NEW_GetAddrInfoExW, (LPVOID*)&OLD_GetAddrInfoExW);
 	
+	// A function that gets called repeatedly on the main thread, so that we can achieve thread-safety when accessing game data.
+	unsigned char* gameUpdateSig = SignatureScanMustSucceed("\x48\x33\xC4\x48\x89\x45\xF0\x80\x3D\x00\x00\x00\x00\x00\x48\x8B\xF1", "xxxxxxxxx????xxxx", imageBase, 40000000, "GameUpdate");
+	gameUpdateSig = (unsigned char*)(((ULONG_PTR)gameUpdateSig - 0x18) & 0xFFFFFFFFFFFFFFF0);
+	MH_CreateHook(gameUpdateSig, NEW_GameUpdate, (LPVOID*)&OLD_GameUpdate);
+
 	// H.Cache.bin download function (we pretend it always succeeds so the game uses the file that's already inside cache)
 	unsigned char* downloadManifestSig = SignatureScanMustSucceed("\x4C\x8B\xDC\x53\x57\x41\x56\x48\x81\xEC\x90\x01\x00\x00", "xxxxxxxxxxxxxx", imageBase, 40000000, "DownloadManifest");
 	MH_CreateHook(downloadManifestSig, NEW_DownloadManifest, (LPVOID*)&OLD_DownloadManifest);
