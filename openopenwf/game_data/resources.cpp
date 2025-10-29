@@ -11,6 +11,14 @@ void ResourceMgr::LoadResource(const std::string& fullName)
 	WarframeString resName;
 	resName.Create(fullName);
 
+	OWFLog("{}", AssetDownloader::Instance->GetManifestTree());
+	auto typeVec = AssetDownloader::Instance->GetAllTypes();
+	for (size_t i = 0; i < typeVec.size(); ++i)
+	{
+		if (typeVec[i].ends_with("bk2"))
+			OWFLog("{}", typeVec[i]);
+	}
+
 	ResourceMgr::Instance->vtable->AcquireResourceByString(this, &res, &resName, g_BaseType);
 
 	WarframeString propertyText;

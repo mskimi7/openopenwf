@@ -10,10 +10,9 @@
 #include <vector>
 
 #include "game_data/warframe_string.h"
+#include "game_data/asset_downloader.h"
 #include "game_data/object_type_names.h"
 #include "game_data/resources.h"
-
-#define MEMBER_OFFSET(type, offset) ((type)((char*)this + (offset)))
 
 // In case we need to unload the DLL.
 inline HINSTANCE g_hInstDll;
@@ -34,12 +33,6 @@ struct OpenWFConfig {
 };
 
 inline OpenWFConfig g_Config;
-
-struct AssetDownloader {
-	inline WarframeString* GetCacheManifestHash() { return MEMBER_OFFSET(WarframeString*, 0x1F0); }
-
-	static inline AssetDownloader* Instance;
-};
 
 inline const char* g_BuildLabelStringPtr;
 

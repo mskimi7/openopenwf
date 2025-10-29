@@ -80,6 +80,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="config.cpp" />
+    <ClCompile Include="game_data\asset_downloader.cpp" />
     <ClCompile Include="game_data\resources.cpp" />
     <ClCompile Include="hooks.cpp" />
     <ClCompile Include="Main.cpp" />
@@ -91,6 +92,7 @@
     <ClCompile Include="utils.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="game_data\asset_downloader.h" />
     <ClInclude Include="game_data\object_type_names.h" />
     <ClInclude Include="game_data\resources.h" />
     <ClInclude Include="json.hpp" />
