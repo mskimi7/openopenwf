@@ -13,6 +13,7 @@
 #include "game_data/asset_downloader.h"
 #include "game_data/object_type_names.h"
 #include "game_data/resources.h"
+#include "ui/property_window.h"
 
 // In case we need to unload the DLL.
 inline HINSTANCE g_hInstDll;

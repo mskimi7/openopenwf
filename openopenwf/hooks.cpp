@@ -190,7 +190,6 @@ static void NEW_SendGetRequest_2(WarframeString* url, void* a2, void* a3)
 
 static void* NEW_GameUpdate(void* a1)
 {
-	OWFLog("GameUpdate");
 	return OLD_GameUpdate(a1);
 }
 

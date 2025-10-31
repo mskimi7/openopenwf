@@ -89,6 +89,7 @@
     <ClCompile Include="minhook\hook.c" />
     <ClCompile Include="minhook\trampoline.c" />
     <ClCompile Include="signature_scan.cpp" />
+    <ClCompile Include="ui\property_window.cpp" />
     <ClCompile Include="utils.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -104,6 +105,8 @@
     <ClInclude Include="minhook\trampoline.h" />
     <ClInclude Include="game_data\warframe_string.h" />
     <ClInclude Include="openwf.h" />
+    <ClInclude Include="ui\property_window.h" />
+    <ClInclude Include="utils\auto_cs.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
