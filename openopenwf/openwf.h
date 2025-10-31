@@ -15,6 +15,8 @@
 #include "game_data/resources.h"
 #include "ui/property_window.h"
 
+#define REDIRECTOR_NAME "openopenwf_2"
+
 // In case we need to unload the DLL.
 inline HINSTANCE g_hInstDll;
 

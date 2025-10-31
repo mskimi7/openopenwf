@@ -144,7 +144,7 @@ static void NEW_SendPostRequestUnified(decltype(OLD_SendPostRequest_1) origFunc,
 	}
 
 	if (newURL.find("login.php") != std::string::npos)
-		newURL += std::format("&buildLabel={}/{}&clientMod=openopenwf_1", OWFGetBuildLabel(), AssetDownloader::Instance->GetCacheManifestHash()->GetText());
+		newURL += std::format("&buildLabel={}/{}&clientMod={}", OWFGetBuildLabel(), AssetDownloader::Instance->GetCacheManifestHash()->GetText(), REDIRECTOR_NAME);
 
 	WarframeString alteredURL;
 	alteredURL.Create(newURL);
