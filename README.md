@@ -10,7 +10,11 @@
 4. Start the game!
 
 ## Configuration
-OpenWF Enabler uses the [same configuration file and format](https://openwf.io/bootstrapper-manual) as the standard bootstrapper, i.e. `OpenWF/Client Config.json`. However, the only configurable setting at this point is `server_host`, which allows you to specify the OpenWF's server hostname. All other settings are (for the time being) ignored.
+OpenWF Enabler uses the [same configuration file and format](https://openwf.io/bootstrapper-manual) as the standard bootstrapper, i.e. `OpenWF/Client Config.json`. However, the only configurable settings at this point are:
+- `server_host`, which allows you to specify the OpenWF's server hostname
+- `disable_nrs_connection`, which prevents Warframe from testing P2P connectivity and raising a firewall warning
+
+All other settings are (for the time being) ignored.
 
 ## Notes
 - If you're using the standard version of OpenWF bootstrapper, you must remove it before using OpenWF Enabler. You cannot use both redirectors simultaneously.
