@@ -124,10 +124,6 @@ static int NEW_rsa_ossl_public_encrypt(int flen, unsigned char* from, unsigned c
 
 static void NEW_SendPostRequestUnified(decltype(OLD_SendPostRequest_1) origFunc, void* a1, WarframeString* url, WarframeString* bodyData, char requestType, void* a5, void* a6)
 {
-	//ResourceMgr::Instance->LoadResource("/EE/Types/Engine/nonexistent.fbx");
-	//ResourceMgr::Instance->LoadResource("/Lotus/Types/Game/Decorations/HelminthMemDeco");
-	ResourceMgr::Instance->LoadResource("/Lotus/Videos/OnLyneMVX_s.bk2");
-
 	WarframeString decryptedData;
 	std::string newURL = ReplaceURLHost(url->GetText());
 
@@ -152,7 +148,7 @@ static void NEW_SendPostRequestUnified(decltype(OLD_SendPostRequest_1) origFunc,
 
 	WarframeString alteredURL;
 	alteredURL.Create(newURL);
-	origFunc(a1, &alteredURL, &decryptedData, requestType, a5, a6);
+	origFunc(a1, &alteredURL, bodyData, requestType, a5, a6);
 }
 
 static void NEW_SendPostRequest_1(void* a1, WarframeString* url, WarframeString* bodyData, char requestType, void* a5, void* a6)
