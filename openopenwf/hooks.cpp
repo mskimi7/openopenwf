@@ -186,11 +186,18 @@ static void NEW_SendGetRequest_2(WarframeString* url, void* a2, void* a3)
 
 static void* NEW_GameUpdate(void* a1)
 {
+	if (AssetDownloader::Instance && PropertyWindow::ShouldReloadTypes())
+	{
+		std::unique_ptr<std::vector<std::string>> allTypes = std::make_unique<std::vector<std::string>>(AssetDownloader::Instance->GetAllTypes());
+		PropertyWindow::PopulateTypeData(std::move(allTypes));
+	}
+
 	return OLD_GameUpdate(a1);
 }
 
 static int NEW_DownloadManifest(AssetDownloader* a1, void* a2, void* a3, void* a4, void* a5, void* a6)
 {
+	PropertyWindow::Create();
 	AssetDownloader::Instance = a1;
 	return 0;
 }
