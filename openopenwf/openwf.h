@@ -9,10 +9,10 @@
 #include <format>
 #include <vector>
 
-#include "game_data/warframe_string.h"
+#include "game_data/common.h"
 #include "game_data/asset_downloader.h"
-#include "game_data/object_type_names.h"
 #include "game_data/resources.h"
+#include "game_data/type_mgr.h"
 #include "ui/property_window.h"
 
 #define REDIRECTOR_NAME "openopenwf_2"
@@ -54,5 +54,3 @@ __declspec(noreturn) void OpenWFFatalExit(const std::string& reason, const std::
 
 inline void (*InitStringFromBytes)(WarframeString*, const char*);
 inline void (*WFFree)(void*);
-inline TypeMgr* (*GetTypeMgr)();
-inline void (*GetPropertyText)(TypeMgr*, ObjectType*, WarframeString*, int);

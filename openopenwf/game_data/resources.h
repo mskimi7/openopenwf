@@ -1,9 +1,6 @@
 #pragma once
 
-#include <string>
-
-struct ResourceMgr;
-struct WarframeString;
+#include "common.h"
 
 struct ObjectType {
 
@@ -50,8 +47,4 @@ struct ResourceMgr {
 
 	ResourceInfo LoadResource(const std::string& fullName);
 	static inline ResourceMgr* Instance;
-};
-
-struct TypeMgr {
-
 };

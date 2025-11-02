@@ -142,6 +142,8 @@ static int NEW_rsa_ossl_public_encrypt(int flen, unsigned char* from, unsigned c
 
 static void NEW_SendPostRequestUnified(decltype(OLD_SendPostRequest_1) origFunc, void* a1, WarframeString* url, WarframeString* bodyData, char requestType, void* a5, void* a6)
 {
+	TypeMgr::GetInstance()->GetRegisteredTypes();
+
 	WarframeString decryptedData;
 	std::string newURL = ReplaceURLHost(url->GetText());
 
@@ -208,12 +210,22 @@ static void* NEW_GameUpdate(void* a1)
 	{
 		// fetch entire type list (if needed)
 		if (PropertyWindow::ShouldReloadTypes())
-			PropertyWindow::ReceiveTypeList(AssetDownloader::Instance->GetAllTypes());
+		{
+			std::unique_ptr<std::unordered_set<std::string>> manifestTypes = AssetDownloader::Instance->GetManifestTypes();
+			std::unique_ptr<std::unordered_set<std::string>> registeredTypes = TypeMgr::GetInstance()->GetRegisteredTypes();
+
+			for (auto&& t : *registeredTypes)
+				manifestTypes->insert(t);
+
+			PropertyWindow::ReceiveTypeList(std::move(manifestTypes));
+		}
 
 		// fetch single type (if needed)
 		std::optional<std::string> requestedTypeInfo = PropertyWindow::ShouldFetchTypeInfo();
 		if (requestedTypeInfo.has_value())
 		{
+			OWFLog("Fetching data {}", *requestedTypeInfo);
+
 			ResourceInfo rinfo = ResourceMgr::Instance->LoadResource(*requestedTypeInfo);
 
 			std::unique_ptr<PropertyWindowTypeInfo> wndTypeInfo = std::make_unique<PropertyWindowTypeInfo>();

@@ -3,8 +3,12 @@
 #include <bcrypt.h>
 #include <winternl.h>
 
+static CriticalSectionOwner loggerLock;
+
 void OpenWFLog(const std::string& message)
 {
+	auto lock = loggerLock.Acquire();
+
 	DWORD charsWritten;
 	WriteConsoleA(GetStdHandle(STD_OUTPUT_HANDLE), message.data(), (DWORD)message.size(), &charsWritten, nullptr);
 	WriteConsoleA(GetStdHandle(STD_OUTPUT_HANDLE), "\n", 1u, &charsWritten, nullptr);

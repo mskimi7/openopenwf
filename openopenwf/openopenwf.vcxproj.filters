@@ -51,6 +51,9 @@
     <ClCompile Include="ui\property_window.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="game_data\type_mgr.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="openwf.h">
@@ -77,10 +80,7 @@
     <ClInclude Include="json.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="game_data\warframe_string.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="game_data\object_type_names.h">
+    <ClInclude Include="game_data\common\warframe_string.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="game_data\resources.h">
@@ -93,6 +93,18 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="utils\auto_cs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="game_data\type_mgr.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="game_data\common.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="game_data\common\compressed_type_name.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="game_data\common\warframe_vector.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

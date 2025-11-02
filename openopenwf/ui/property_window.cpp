@@ -39,7 +39,7 @@ void PropertyWindow::UpdateTypeTree()
 		return;
 	
 	this->hasRequestedTypeList = false;
-	std::unique_ptr<std::vector<std::string>> allTypes = std::move(this->pendingTypeData);
+	std::unique_ptr<std::unordered_set<std::string>> allTypes = std::move(this->pendingTypeData);
 
 	lock.Release(); // now we have all required data in local variables, we can release lock while we recreate the window controls
 
@@ -79,7 +79,7 @@ void PropertyWindow::UpdateTypeTree()
 		}
 	}
 
-	auto insertEntries = [&](const auto& self, HTREEITEM parent, const std::string& parentName, const std::string& name, TempTreeEntry* children, int nesting) -> void {
+	auto insertEntries = [&](const auto& self, HTREEITEM parent, const std::string& parentName, const std::string& name, TempTreeEntry* children) -> void {
 		std::wstring wideName = UTF8ToWide(name);
 		std::string fullPath = parentName + name;
 
@@ -100,7 +100,7 @@ void PropertyWindow::UpdateTypeTree()
 		if (children)
 		{
 			for (auto&& childDir : children->directories)
-				self(self, hEntry, fullPath, childDir.first + "/", &childDir.second, nesting + 1);
+				self(self, hEntry, fullPath, childDir.first + "/", &childDir.second);
 
 			for (auto&& file : children->files)
 			{
@@ -116,7 +116,7 @@ void PropertyWindow::UpdateTypeTree()
 	};
 
 	SendMessageW(this->hTypeTree, WM_SETREDRAW, FALSE, 0);
-	insertEntries(insertEntries, nullptr, "", "/", &rootEntry, 0);
+	insertEntries(insertEntries, nullptr, "", "/", &rootEntry);
 	SendMessageW(this->hTypeTree, WM_SETREDRAW, TRUE, 0);
 	RedrawWindow(this->hTypeTree, NULL, NULL, RDW_ERASE | RDW_FRAME | RDW_INVALIDATE | RDW_ALLCHILDREN);
 }
@@ -151,6 +151,7 @@ void PropertyWindow::UpdateTypeInfo()
 		return;
 
 	this->requestedTypeInfo.clear();
+	std::unique_ptr<PropertyWindowTypeInfo> typeInfo = std::move(this->pendingTypeInfo);
 }
 
 void PropertyWindow::RequestTypeInfo(const std::string& typeInfo)
@@ -323,7 +324,7 @@ std::optional<std::string> PropertyWindow::ShouldFetchTypeInfo()
 	return (IsOpen() && !window->requestedTypeInfo.empty()) ? std::make_optional(window->requestedTypeInfo) : std::nullopt;
 }
 
-void PropertyWindow::ReceiveTypeList(std::unique_ptr<std::vector<std::string>> allTypes)
+void PropertyWindow::ReceiveTypeList(std::unique_ptr<std::unordered_set<std::string>> allTypes)
 {
 	auto lock = PropertyWindow::Lock.Acquire();
 

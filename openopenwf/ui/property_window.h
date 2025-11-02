@@ -7,6 +7,7 @@
 #include <optional>
 #include <memory>
 #include <map>
+#include <unordered_set>
 #include <unordered_map>
 
 #include <CommCtrl.h>
@@ -29,7 +30,7 @@ private:
 
 	std::vector<std::string*> typeTreeAllocatedStrings;
 
-	std::unique_ptr<std::vector<std::string>> pendingTypeData;
+	std::unique_ptr<std::unordered_set<std::string>> pendingTypeData;
 	std::unique_ptr<PropertyWindowTypeInfo> pendingTypeInfo;
 	
 	POINT GetOffsetIntoTabControl();
@@ -55,7 +56,7 @@ public:
 	static bool ShouldReloadTypes();
 	static std::optional<std::string> ShouldFetchTypeInfo();
 
-	static void ReceiveTypeList(std::unique_ptr<std::vector<std::string>> allTypes);
+	static void ReceiveTypeList(std::unique_ptr<std::unordered_set<std::string>> allTypes);
 	static void ReceiveTypeInfo(std::unique_ptr<PropertyWindowTypeInfo> typeInfo);
 
 	static inline bool DisableNotify; // this improves performance when deleting a TreeView

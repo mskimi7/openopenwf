@@ -82,6 +82,7 @@
     <ClCompile Include="config.cpp" />
     <ClCompile Include="game_data\asset_downloader.cpp" />
     <ClCompile Include="game_data\resources.cpp" />
+    <ClCompile Include="game_data\type_mgr.cpp" />
     <ClCompile Include="hooks.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="minhook\buffer.c" />
@@ -94,8 +95,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="game_data\asset_downloader.h" />
-    <ClInclude Include="game_data\object_type_names.h" />
+    <ClInclude Include="game_data\common.h" />
+    <ClInclude Include="game_data\common\compressed_type_name.h" />
+    <ClInclude Include="game_data\common\warframe_vector.h" />
     <ClInclude Include="game_data\resources.h" />
+    <ClInclude Include="game_data\type_mgr.h" />
     <ClInclude Include="json.hpp" />
     <ClInclude Include="minhook\buffer.h" />
     <ClInclude Include="minhook\hde\hde64.h" />
@@ -103,7 +107,7 @@
     <ClInclude Include="minhook\hde\table64.h" />
     <ClInclude Include="minhook\MinHook.h" />
     <ClInclude Include="minhook\trampoline.h" />
-    <ClInclude Include="game_data\warframe_string.h" />
+    <ClInclude Include="game_data\common\warframe_string.h" />
     <ClInclude Include="openwf.h" />
     <ClInclude Include="ui\property_window.h" />
     <ClInclude Include="utils\auto_cs.h" />
