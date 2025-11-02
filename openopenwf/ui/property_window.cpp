@@ -23,10 +23,10 @@ POINT PropertyWindow::GetOffsetIntoTabControl()
 	return { tvRect.left, tvRect.top };
 }
 
-void PropertyWindow::RequestReloadTypes()
+void PropertyWindow::RequestReloadTypeList()
 {
 	auto lock = PropertyWindow::Lock.Acquire();
-	this->hasRequestedTypeReload = true;
+	this->hasRequestedTypeList = true;
 }
 
 void PropertyWindow::UpdateTypeTree()
@@ -37,8 +37,8 @@ void PropertyWindow::UpdateTypeTree()
 	auto lock = PropertyWindow::Lock.Acquire();
 	if (!this->pendingTypeData)
 		return;
-
-	this->hasRequestedTypeReload = false;
+	
+	this->hasRequestedTypeList = false;
 	std::unique_ptr<std::vector<std::string>> allTypes = std::move(this->pendingTypeData);
 
 	lock.Release(); // now we have all required data in local variables, we can release lock while we recreate the window controls
@@ -79,9 +79,7 @@ void PropertyWindow::UpdateTypeTree()
 		}
 	}
 
-	int DEBUG_allocs = 0;
-
-	auto insertEntries = [&](const auto& self, HTREEITEM parent, const std::string& parentName, const std::string& name, TempTreeEntry* children) -> void {
+	auto insertEntries = [&](const auto& self, HTREEITEM parent, const std::string& parentName, const std::string& name, TempTreeEntry* children, int nesting) -> void {
 		std::wstring wideName = UTF8ToWide(name);
 		std::string fullPath = parentName + name;
 
@@ -93,7 +91,7 @@ void PropertyWindow::UpdateTypeTree()
 		tviData.item.cchTextMax = (int)wideName.size() + 1;
 		HTREEITEM hEntry = TreeView_InsertItem(this->hTypeTree, &tviData);
 
-		++DEBUG_allocs;
+		this->typeTreeAllocatedStrings.push_back((std::string*)tviData.item.lParam);
 
 		// for future files
 		tviData.hParent = hEntry;
@@ -102,7 +100,7 @@ void PropertyWindow::UpdateTypeTree()
 		if (children)
 		{
 			for (auto&& childDir : children->directories)
-				self(self, hEntry, fullPath, childDir.first + "/", &childDir.second);
+				self(self, hEntry, fullPath, childDir.first + "/", &childDir.second, nesting + 1);
 
 			for (auto&& file : children->files)
 			{
@@ -110,53 +108,55 @@ void PropertyWindow::UpdateTypeTree()
 				tviData.item.lParam = (LPARAM)new std::string(fullPath + file); // this will be freed when deleting items from this treeview
 				tviData.item.pszText = wideName.data();
 				tviData.item.cchTextMax = (int)wideName.size() + 1;
-				TreeView_InsertItem(this->hTypeTree, &tviData);
+				HTREEITEM hFileEntry = TreeView_InsertItem(this->hTypeTree, &tviData);
 
-				++DEBUG_allocs;
+				this->typeTreeAllocatedStrings.push_back((std::string*)tviData.item.lParam);
 			}
 		}
 	};
 
-	insertEntries(insertEntries, nullptr, "", "/", &rootEntry);
-	OWFLog("[DEBUG] {} string allocations", DEBUG_allocs);
+	SendMessageW(this->hTypeTree, WM_SETREDRAW, FALSE, 0);
+	insertEntries(insertEntries, nullptr, "", "/", &rootEntry, 0);
+	SendMessageW(this->hTypeTree, WM_SETREDRAW, TRUE, 0);
+	RedrawWindow(this->hTypeTree, NULL, NULL, RDW_ERASE | RDW_FRAME | RDW_INVALIDATE | RDW_ALLCHILDREN);
 }
 
 void PropertyWindow::ClearTypeTree()
 {
-	std::stack<HTREEITEM> items;
-	items.push(TreeView_GetRoot(this->hTypeTree));
-
-	int DEBUG_frees = 0;
-
-	while (!items.empty())
-	{
-		HTREEITEM hTreeItem = items.top();
-		items.pop();
-
-		if (!hTreeItem)
-			continue;
-
-		TVITEMW itemData = { 0 };
-		itemData.mask = TVIF_HANDLE | TVIF_PARAM;
-		itemData.hItem = hTreeItem;
-		TreeView_GetItem(this->hTypeTree, &itemData);
-
-		delete (std::string*)itemData.lParam; // free memory stored in the tree element (fully-qualified type name)
-		++DEBUG_frees;
-
-		HTREEITEM hChildItem = TreeView_GetChild(this->hTypeTree, hTreeItem);
-		items.push(hChildItem);
-
-		while (hChildItem)
-		{
-			hChildItem = TreeView_GetNextSibling(this->hTypeTree, hChildItem);
-			if (hChildItem)
-				items.push(hChildItem);
-		}
-	}
+	SendMessageW(this->hTypeTree, WM_SETREDRAW, FALSE, 0);
+	
+	// this lets the NotifyWinEvent hook know to just return early; otherwise each element's removal will call this function
+	// and result in a useless system call (Microsoft wtf?)
+	PropertyWindow::DisableNotify = true;
 
 	TreeView_DeleteAllItems(this->hTypeTree);
-	OWFLog("[DEBUG] {} strings freed", DEBUG_frees);
+
+	PropertyWindow::DisableNotify = false;
+	SendMessageW(this->hTypeTree, WM_SETREDRAW, TRUE, 0);
+	RedrawWindow(this->hTypeTree, NULL, NULL, RDW_ERASE | RDW_FRAME | RDW_INVALIDATE | RDW_ALLCHILDREN);
+
+	for (auto&& ptr : this->typeTreeAllocatedStrings)
+		delete ptr;
+
+	this->typeTreeAllocatedStrings.clear();
+}
+
+void PropertyWindow::UpdateTypeInfo()
+{
+	if (!this->pendingTypeInfo)
+		return;
+
+	auto lock = PropertyWindow::Lock.Acquire();
+	if (!this->pendingTypeInfo)
+		return;
+
+	this->requestedTypeInfo.clear();
+}
+
+void PropertyWindow::RequestTypeInfo(const std::string& typeInfo)
+{
+	auto lock = PropertyWindow::Lock.Acquire();
+	this->requestedTypeInfo = typeInfo;
 }
 
 LRESULT WINAPI PropertyWindow::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -166,12 +166,38 @@ LRESULT WINAPI PropertyWindow::WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARA
 	case WM_COMMAND:
 	{
 		if (lParam == (LPARAM)window->hRefreshList)
-			window->RequestReloadTypes();
+			window->RequestReloadTypeList();
 		else
 			return DefWindowProcW(hWnd, msg, wParam, lParam);
 
 		return 0;
 	}
+
+	case WM_NOTIFY:
+	{
+		LPNMHDR notifyInfo = (LPNMHDR)lParam;
+		if (notifyInfo->hwndFrom == window->hTypeTree && notifyInfo->code == TVN_SELCHANGED)
+		{
+			LPNMTREEVIEWW tvNotifyInfo = (LPNMTREEVIEWW)lParam;
+			std::string* selectedTypeName = (std::string*)tvNotifyInfo->itemNew.lParam;
+			if (selectedTypeName && !selectedTypeName->empty() && selectedTypeName->back() != '/') // this shouldn't really ever be null...
+			{
+				OWFLog("[DEBUG] Requesting info for type: {}", *selectedTypeName);
+				window->RequestTypeInfo(*selectedTypeName);
+			}
+		}
+
+		return 0;
+	}
+
+	case WM_CLOSE:
+		DestroyWindow(hWnd);
+		return 0;
+
+	case WM_DESTROY:
+		PostQuitMessage(0);
+		return 0;
+
 	default:
 		break;
 	}
@@ -209,7 +235,7 @@ void PropertyWindow::CreateInternal()
 	window->hMainWindow = CreateWindowExW(WS_EX_APPWINDOW | WS_EX_WINDOWEDGE | WS_EX_CONTROLPARENT, wc.lpszClassName, L"OpenWF - Property Text Inspector",
 		WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN | WS_CLIPSIBLINGS, CW_USEDEFAULT, CW_USEDEFAULT, 931, 459, nullptr, nullptr, wc.hInstance, nullptr);
 	
-	window->hTypeTree = CreateWindowExW(0, WC_TREEVIEWW, L"", WS_CHILD | WS_VISIBLE | WS_BORDER | TVS_HASLINES | TVS_HASBUTTONS | TVS_LINESATROOT, 12, 12, 343, 362, window->hMainWindow, nullptr, wc.hInstance, nullptr);
+	window->hTypeTree = CreateWindowExW(WS_EX_NOPARENTNOTIFY, WC_TREEVIEWW, L"", WS_CHILD | WS_VISIBLE | WS_BORDER | TVS_HASLINES | TVS_HASBUTTONS | TVS_LINESATROOT, 12, 12, 343, 362, window->hMainWindow, nullptr, wc.hInstance, nullptr);
 	window->hRefreshList = CreateWindowExW(0, L"BUTTON", L"Refresh list", WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_TABSTOP, 240, 380, 115, 28, window->hMainWindow, nullptr, wc.hInstance, nullptr);
 	
 	window->hTabView = CreateWindowExW(0, WC_TABCONTROLW, L"", WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | TCS_HOTTRACK, 361, 12, 542, 396, window->hMainWindow, nullptr, wc.hInstance, nullptr);
@@ -258,6 +284,7 @@ void PropertyWindow::CreateInternal()
 		}
 
 		window->UpdateTypeTree();
+		window->UpdateTypeInfo();
 	}
 }
 
@@ -285,12 +312,33 @@ void PropertyWindow::Create()
 bool PropertyWindow::ShouldReloadTypes()
 {
 	auto lock = PropertyWindow::Lock.Acquire();
-	return IsOpen() && window->hasRequestedTypeReload && window->pendingTypeData == nullptr;
+
+	return IsOpen() && window->hasRequestedTypeList;
 }
 
-void PropertyWindow::PopulateTypeData(std::unique_ptr<std::vector<std::string>> allTypes)
+std::optional<std::string> PropertyWindow::ShouldFetchTypeInfo()
 {
 	auto lock = PropertyWindow::Lock.Acquire();
+
+	return (IsOpen() && !window->requestedTypeInfo.empty()) ? std::make_optional(window->requestedTypeInfo) : std::nullopt;
+}
+
+void PropertyWindow::ReceiveTypeList(std::unique_ptr<std::vector<std::string>> allTypes)
+{
+	auto lock = PropertyWindow::Lock.Acquire();
+
 	window->pendingTypeData = std::move(allTypes);
+	window->hasRequestedTypeList = false;
+
 	PostMessageW(window->hMainWindow, WM_NULL, 0, 0); // wake up the window so that it processes the type list
+}
+
+void PropertyWindow::ReceiveTypeInfo(std::unique_ptr<PropertyWindowTypeInfo> typeInfo)
+{
+	auto lock = PropertyWindow::Lock.Acquire();
+
+	window->pendingTypeInfo = std::move(typeInfo);
+	window->requestedTypeInfo.clear();
+
+	PostMessageW(window->hMainWindow, WM_NULL, 0, 0); // wake up the window so that it processes the type info
 }

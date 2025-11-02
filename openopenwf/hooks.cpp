@@ -8,6 +8,8 @@ static decltype(&WinHttpConnect) OLD_WinHttpConnect;
 static decltype(&connect) OLD_connect;
 static decltype(&getaddrinfo) OLD_getaddrinfo;
 static decltype(&GetAddrInfoExW) OLD_GetAddrInfoExW;
+static decltype(&SendMessageW) OLD_SendMessageW;
+static decltype(&NotifyWinEvent) OLD_NotifyWinEvent;
 static void* (*OLD_GameUpdate)(void*);
 static int (*OLD_DownloadManifest)(AssetDownloader*, void*, void*, void*, void*, void*);
 static int (*OLD_X509_verify_cert)(void*);
@@ -93,6 +95,22 @@ static INT WSAAPI NEW_GetAddrInfoExW(PCWSTR pName, PCWSTR pServiceName, DWORD dw
 	}
 
 	return OLD_GetAddrInfoExW(pName, pServiceName, dwNameSpace, lpNspId, hints, ppResult, timeout, lpOverlapped, lpCompletionRoutine, lpHandle);
+}
+
+LRESULT WINAPI NEW_SendMessageW(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
+{
+	if (PropertyWindow::DisableNotify && Msg == WM_NOTIFY)
+		return 0;
+
+	return OLD_SendMessageW(hWnd, Msg, wParam, lParam);
+}
+
+VOID WINAPI NEW_NotifyWinEvent(DWORD event, HWND hwnd, LONG idObject, LONG idChild)
+{
+	if (PropertyWindow::DisableNotify && event == EVENT_OBJECT_DESTROY)
+		return;
+
+	return OLD_NotifyWinEvent(event, hwnd, idObject, idChild);
 }
 
 static int NEW_X509_verify_cert(void* ctx)
@@ -186,10 +204,23 @@ static void NEW_SendGetRequest_2(WarframeString* url, void* a2, void* a3)
 
 static void* NEW_GameUpdate(void* a1)
 {
-	if (AssetDownloader::Instance && PropertyWindow::ShouldReloadTypes())
+	if (AssetDownloader::Instance && ResourceMgr::Instance)
 	{
-		std::unique_ptr<std::vector<std::string>> allTypes = std::make_unique<std::vector<std::string>>(AssetDownloader::Instance->GetAllTypes());
-		PropertyWindow::PopulateTypeData(std::move(allTypes));
+		// fetch entire type list (if needed)
+		if (PropertyWindow::ShouldReloadTypes())
+			PropertyWindow::ReceiveTypeList(AssetDownloader::Instance->GetAllTypes());
+
+		// fetch single type (if needed)
+		std::optional<std::string> requestedTypeInfo = PropertyWindow::ShouldFetchTypeInfo();
+		if (requestedTypeInfo.has_value())
+		{
+			ResourceInfo rinfo = ResourceMgr::Instance->LoadResource(*requestedTypeInfo);
+
+			std::unique_ptr<PropertyWindowTypeInfo> wndTypeInfo = std::make_unique<PropertyWindowTypeInfo>();
+			wndTypeInfo->errorMsg = "Not yet implemented";
+
+			PropertyWindow::ReceiveTypeInfo(std::move(wndTypeInfo));
+		}
 	}
 
 	return OLD_GameUpdate(a1);
@@ -228,6 +259,9 @@ void PlaceHooks()
 {
 	unsigned char* imageBase = (unsigned char*)GetModuleHandleA(nullptr);
 
+	if (!LoadLibraryA("user32.dll"))
+		FATAL_EXIT("Failed to load user32.dll");
+
 	if (!LoadLibraryA("ws2_32.dll"))
 		FATAL_EXIT("Failed to load ws2_32.dll (Winsock library)");
 
@@ -239,6 +273,10 @@ void PlaceHooks()
 	// these two aren't technically necessary but we still hook them for good measure
 	MH_CreateHookApi(L"ws2_32.dll", "getaddrinfo", NEW_getaddrinfo, (LPVOID*)&OLD_getaddrinfo);
 	MH_CreateHookApi(L"ws2_32.dll", "GetAddrInfoExW", NEW_GetAddrInfoExW, (LPVOID*)&OLD_GetAddrInfoExW);
+
+	// these two hooks (especially the NotifyWinEvent one) massively improve performance of clearing a TreeView in the property window... kinda cursed tho
+	MH_CreateHookApi(L"user32.dll", "SendMessageW", NEW_SendMessageW, (LPVOID*)&OLD_SendMessageW);
+	MH_CreateHookApi(L"user32.dll", "NotifyWinEvent", NEW_NotifyWinEvent, (LPVOID*)&OLD_NotifyWinEvent);
 	
 	// A function that gets called repeatedly on the main thread, so that we can achieve thread-safety when accessing game data.
 	unsigned char* gameUpdateSig = SignatureScanMustSucceed("\x48\x33\xC4\x48\x89\x45\xF0\x80\x3D\x00\x00\x00\x00\x00\x48\x8B\xF1", "xxxxxxxxx????xxxx", imageBase, 40000000, "GameUpdate");

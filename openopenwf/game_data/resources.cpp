@@ -2,7 +2,7 @@
 
 #include "../openwf.h"
 
-void ResourceMgr::LoadResource(const std::string& fullName)
+ResourceInfo ResourceMgr::LoadResource(const std::string& fullName)
 {
 	ObjectSmartPtr objPtr;
 	Resource res;
@@ -11,18 +11,18 @@ void ResourceMgr::LoadResource(const std::string& fullName)
 	WarframeString resName;
 	resName.Create(fullName);
 
-	OWFLog("{}", AssetDownloader::Instance->GetManifestTree());
-	auto typeVec = AssetDownloader::Instance->GetAllTypes();
-	for (size_t i = 0; i < typeVec.size(); ++i)
-	{
-		if (typeVec[i].ends_with("bk2"))
-			OWFLog("{}", typeVec[i]);
-	}
-
 	ResourceMgr::Instance->vtable->AcquireResourceByString(this, &res, &resName, g_BaseType);
+	if (!res.type)
+		return ResourceInfo();
 
 	WarframeString propertyText;
 	GetPropertyText(GetTypeMgr(), res.type, &propertyText, 0x41000003);
 
 	OWFLog("{}", propertyText.GetText());
+
+	ResourceInfo rinfo;
+	rinfo.type = res.type;
+	rinfo.propertyText = propertyText.GetText();
+	
+	return rinfo;
 }

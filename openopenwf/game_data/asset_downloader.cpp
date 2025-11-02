@@ -26,7 +26,7 @@ struct TreeBlock {
 	TreeEntryVector data[3];
 };
 
-std::vector<std::string> AssetDownloader::GetAllTypes()
+std::unique_ptr<std::vector<std::string>> AssetDownloader::GetAllTypes()
 {
 	std::unordered_set<CompressedTypeName, CompressedTypeName::Hash> allNames;
 
@@ -45,9 +45,9 @@ std::vector<std::string> AssetDownloader::GetAllTypes()
 			allNames.insert(treeBlock->data[2].ptr[i].name);
 	}
 
-	std::vector<std::string> convertedNames;
+	std::unique_ptr<std::vector<std::string>> convertedNames = std::make_unique<std::vector<std::string>>();
 	for (auto&& name : allNames)
-		convertedNames.push_back(std::string(g_ObjTypeNameMapping->GetName(name.pathIndex)) + g_ObjTypeNameMapping->GetName(name.nameIndex));
+		convertedNames->push_back(std::string(g_ObjTypeNameMapping->GetName(name.pathIndex)) + g_ObjTypeNameMapping->GetName(name.nameIndex));
 
 	LeaveCriticalSection(this->GetManifestTreeLock());
 

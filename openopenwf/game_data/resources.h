@@ -25,6 +25,11 @@ struct Resource {
 
 typedef void(*AcquireResourceByString_t)(ResourceMgr* resMgr, Resource* outType, WarframeString* objectName, ObjectType* requestedObjectType);
 
+struct ResourceInfo {
+	ObjectType* type = nullptr;
+	std::string propertyText;
+};
+
 struct ResourceMgrVTable {
 	void* func0; // add resource reference?
 	void* func1; // remove resource reference?
@@ -43,7 +48,7 @@ struct ResourceMgrVTable {
 struct ResourceMgr {
 	ResourceMgrVTable* vtable;
 
-	void LoadResource(const std::string& fullName);
+	ResourceInfo LoadResource(const std::string& fullName);
 	static inline ResourceMgr* Instance;
 };
 
