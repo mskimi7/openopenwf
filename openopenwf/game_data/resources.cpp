@@ -18,7 +18,7 @@ ResourceInfo ResourceMgr::LoadResource(const std::string& fullName)
 	WarframeString propertyText;
 	GetPropertyText(TypeMgr::GetInstance(), res.type, &propertyText, 0x41000003);
 
-	OWFLog("{}", propertyText.GetText());
+	OWFLog("{} {}", (void*)res.type, propertyText.GetText());
 
 	ResourceInfo rinfo;
 	rinfo.type = res.type;

@@ -35,6 +35,8 @@ private:
 	
 	POINT GetOffsetIntoTabControl();
 
+	void SetTypeInfoControls(const PropertyWindowTypeInfo& typeInfo);
+
 	void UpdateTypeTree();
 	void ClearTypeTree();
 

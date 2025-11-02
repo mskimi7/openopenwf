@@ -204,6 +204,25 @@ static void NEW_SendGetRequest_2(WarframeString* url, void* a2, void* a3)
 	return NEW_SendGetRequestUnified(OLD_SendGetRequest_2, url, a2, a3);
 }
 
+static std::unique_ptr<PropertyWindowTypeInfo> ResourceInfoToUITypeInfo(const ResourceInfo& info)
+{
+	std::unique_ptr<PropertyWindowTypeInfo> wndTypeInfo = std::make_unique<PropertyWindowTypeInfo>();
+	if (!info.type)
+	{
+		wndTypeInfo->errorMsg = "Failed to fetch type! Check EE.log for details.";
+		return wndTypeInfo;
+	}
+
+	ObjectType* tt = info.type;
+
+	do {
+		wndTypeInfo->inheritanceChain.push_back(g_ObjTypeNameMapping->GetName(tt->GetName()));
+		tt = tt->parent;
+	} while (tt);
+
+	return wndTypeInfo;
+}
+
 static void* NEW_GameUpdate(void* a1)
 {
 	if (AssetDownloader::Instance && ResourceMgr::Instance)
@@ -227,9 +246,7 @@ static void* NEW_GameUpdate(void* a1)
 			OWFLog("Fetching data {}", *requestedTypeInfo);
 
 			ResourceInfo rinfo = ResourceMgr::Instance->LoadResource(*requestedTypeInfo);
-
-			std::unique_ptr<PropertyWindowTypeInfo> wndTypeInfo = std::make_unique<PropertyWindowTypeInfo>();
-			wndTypeInfo->errorMsg = "Not yet implemented";
+			std::unique_ptr<PropertyWindowTypeInfo> wndTypeInfo = ResourceInfoToUITypeInfo(rinfo);
 
 			PropertyWindow::ReceiveTypeInfo(std::move(wndTypeInfo));
 		}

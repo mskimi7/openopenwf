@@ -23,6 +23,38 @@ POINT PropertyWindow::GetOffsetIntoTabControl()
 	return { tvRect.left, tvRect.top };
 }
 
+void PropertyWindow::SetTypeInfoControls(const PropertyWindowTypeInfo& typeInfo)
+{
+	std::wstring labelText;
+	if (!typeInfo.errorMsg.empty())
+	{
+		labelText = UTF8ToWide(typeInfo.errorMsg);
+	}
+	else
+	{
+		labelText = UTF8ToWide("Selected: "s + typeInfo.inheritanceChain[0]);
+	}
+
+	RECT tvRect;
+	GetClientRect(this->hTabView, &tvRect);
+	TabCtrl_AdjustRect(this->hTabView, FALSE, &tvRect);
+	int areaWidth = tvRect.right - tvRect.left;
+
+	HDC hDC = GetDC(this->hTypeLabel);
+	RECT textExtent = { 0 };
+	textExtent.right = areaWidth;
+	DrawTextW(hDC, labelText.c_str(), -1, &textExtent, DT_CALCRECT | DT_NOPREFIX);
+	ReleaseDC(this->hTypeLabel, hDC);
+	int textHeight = textExtent.bottom;
+
+	SetWindowPos(this->hTypeLabel, nullptr, 0, 0, tvRect.right - tvRect.left, tvRect.bottom - tvRect.top, SWP_NOMOVE | SWP_NOACTIVATE | SWP_NOZORDER);
+	SetWindowTextW(this->hTypeLabel, labelText.c_str());
+
+	
+
+	RedrawWindow(this->hTabView, nullptr, nullptr, RDW_ERASE | RDW_FRAME | RDW_INVALIDATE | RDW_ALLCHILDREN);
+}
+
 void PropertyWindow::RequestReloadTypeList()
 {
 	auto lock = PropertyWindow::Lock.Acquire();
@@ -152,6 +184,8 @@ void PropertyWindow::UpdateTypeInfo()
 
 	this->requestedTypeInfo.clear();
 	std::unique_ptr<PropertyWindowTypeInfo> typeInfo = std::move(this->pendingTypeInfo);
+
+	this->SetTypeInfoControls(*typeInfo);
 }
 
 void PropertyWindow::RequestTypeInfo(const std::string& typeInfo)

@@ -11,4 +11,6 @@ struct TypeMgr;
 struct ResourceMgr;
 struct ObjectType;
 
+inline ObjectType* g_BaseType; // ultimate parent of all types
+
 #define MEMBER_OFFSET(type, offset) ((type)((char*)this + (offset)))

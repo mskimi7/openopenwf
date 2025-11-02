@@ -10,7 +10,7 @@ std::unique_ptr<std::unordered_set<std::string>> TypeMgr::GetRegisteredTypes()
     for (size_t i = 0; i < paths->size(); ++i)
     {
         std::string path = g_ObjTypeNameMapping->GetName(paths->ptr[i].pathIndex);
-        WarframeVector<TypeMgrEntry>* types = paths->ptr[i].entry->GetTypes();
+        WarframeVector<TypeMgrEntry>* types = &paths->ptr[i].entry->types;
 
         for (size_t j = 0; j < types->size(); ++j)
             result->insert(path + g_ObjTypeNameMapping->GetName(types->ptr[j].nameIndex));

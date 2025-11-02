@@ -17,6 +17,8 @@
 
 #define REDIRECTOR_NAME "openopenwf_2"
 
+using namespace std::string_literals;
+
 // In case we need to unload the DLL.
 inline HINSTANCE g_hInstDll;
 

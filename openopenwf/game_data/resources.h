@@ -2,12 +2,6 @@
 
 #include "common.h"
 
-struct ObjectType {
-
-};
-
-inline ObjectType* g_BaseType; // ultimate parent of all types
-
 // Frankly I have no idea what's going on here, it looks like some reference counted pointer
 struct ObjectSmartPtr {
 	void* ptr = nullptr;
