@@ -22,6 +22,7 @@ static void HookedEntryPoint()
 	LoadConfig();
 	g_Config.PrintToConsole();
 
+	InitCLR();
 	PlaceHooks();
 
 	// restore original entry point and continue execution from there

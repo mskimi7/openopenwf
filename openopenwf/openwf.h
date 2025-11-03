@@ -45,6 +45,7 @@ std::vector<unsigned char*> SignatureScan(const char* pattern, const char* mask,
 std::string AESDecrypt(const std::string& inputData, const std::string& key, const std::string& iv);
 
 void LoadConfig();
+void InitCLR();
 void PlaceHooks();
 std::string OWFGetBuildLabel();
 

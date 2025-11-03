@@ -2,6 +2,7 @@
 #include "minhook/MinHook.h"
 
 #include <winhttp.h>
+#include <Shlwapi.h>
 #include <intrin.h>
 
 static decltype(&WinHttpConnect) OLD_WinHttpConnect;
