@@ -37,6 +37,7 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Drawing" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -46,10 +47,24 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Inspector.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Inspector.Designer.cs">
+      <DependentUpon>Inspector.cs</DependentUpon>
+    </Compile>
     <Compile Include="Main.cs" />
     <Compile Include="NativeEvents\NativeEvent.cs" />
+    <Compile Include="NativeEvents\RequestSuppressMsgNotifyEvent.cs" />
+    <Compile Include="NativeEvents\RequestTypeListEvent.cs" />
+    <Compile Include="NativeEvents\ResponseTypeListEvent.cs" />
     <Compile Include="NativeInterface.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Inspector.resx">
+      <DependentUpon>Inspector.cs</DependentUpon>
+    </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

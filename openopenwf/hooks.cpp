@@ -100,7 +100,7 @@ static INT WSAAPI NEW_GetAddrInfoExW(PCWSTR pName, PCWSTR pServiceName, DWORD dw
 
 LRESULT WINAPI NEW_SendMessageW(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
 {
-	if (PropertyWindow::DisableNotify && Msg == WM_NOTIFY)
+	if (g_DisableWin32NotifyMessages && Msg == WM_NOTIFY)
 		return 0;
 
 	return OLD_SendMessageW(hWnd, Msg, wParam, lParam);
@@ -108,7 +108,7 @@ LRESULT WINAPI NEW_SendMessageW(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lPara
 
 VOID WINAPI NEW_NotifyWinEvent(DWORD event, HWND hwnd, LONG idObject, LONG idChild)
 {
-	if (PropertyWindow::DisableNotify && event == EVENT_OBJECT_DESTROY)
+	if (g_DisableWin32NotifyMessages && event == EVENT_OBJECT_DESTROY)
 		return;
 
 	return OLD_NotifyWinEvent(event, hwnd, idObject, idChild);
@@ -205,7 +205,7 @@ static void NEW_SendGetRequest_2(WarframeString* url, void* a2, void* a3)
 	return NEW_SendGetRequestUnified(OLD_SendGetRequest_2, url, a2, a3);
 }
 
-static std::unique_ptr<PropertyWindowTypeInfo> ResourceInfoToUITypeInfo(const ResourceInfo& info)
+/*static std::unique_ptr<PropertyWindowTypeInfo> ResourceInfoToUITypeInfo(const ResourceInfo& info)
 {
 	std::unique_ptr<PropertyWindowTypeInfo> wndTypeInfo = std::make_unique<PropertyWindowTypeInfo>();
 	if (!info.type)
@@ -222,34 +222,37 @@ static std::unique_ptr<PropertyWindowTypeInfo> ResourceInfoToUITypeInfo(const Re
 	} while (tt);
 
 	return wndTypeInfo;
-}
+}*/
 
 static void* NEW_GameUpdate(void* a1)
 {
 	if (AssetDownloader::Instance && ResourceMgr::Instance)
 	{
-		// fetch entire type list (if needed)
-		if (PropertyWindow::ShouldReloadTypes())
+		auto event = CLRInterop::GetManagedEvent();
+		if (!event)
+			return OLD_GameUpdate(a1);
+
+		switch (event->GetId())
 		{
-			std::unique_ptr<std::unordered_set<std::string>> manifestTypes = AssetDownloader::Instance->GetManifestTypes();
-			std::unique_ptr<std::unordered_set<std::string>> registeredTypes = TypeMgr::GetInstance()->GetRegisteredTypes();
+			case NativeEventId::RequestTypeList:
+			{
+				std::unique_ptr<std::unordered_set<std::string>> manifestTypes = AssetDownloader::Instance->GetManifestTypes();
+				std::unique_ptr<std::unordered_set<std::string>> registeredTypes = TypeMgr::GetInstance()->GetRegisteredTypes();
 
-			for (auto&& t : *registeredTypes)
-				manifestTypes->insert(t);
+				for (auto&& t : *registeredTypes)
+					manifestTypes->insert(t);
 
-			PropertyWindow::ReceiveTypeList(std::move(manifestTypes));
-		}
+				CLRInterop::SendTypeList(*manifestTypes);
+				break;
+			}
 
-		// fetch single type (if needed)
-		std::optional<std::string> requestedTypeInfo = PropertyWindow::ShouldFetchTypeInfo();
-		if (requestedTypeInfo.has_value())
-		{
-			OWFLog("Fetching data {}", *requestedTypeInfo);
+			case NativeEventId::RequestSuppressMsgNotify:
+			{
+				RequestSuppressMsgNotifyEvent* suppressEvt = (RequestSuppressMsgNotifyEvent*)event.get();
+				g_DisableWin32NotifyMessages = suppressEvt->shouldSuppress;
 
-			ResourceInfo rinfo = ResourceMgr::Instance->LoadResource(*requestedTypeInfo);
-			std::unique_ptr<PropertyWindowTypeInfo> wndTypeInfo = ResourceInfoToUITypeInfo(rinfo);
-
-			PropertyWindow::ReceiveTypeInfo(std::move(wndTypeInfo));
+				break;
+			}
 		}
 	}
 
@@ -258,7 +261,6 @@ static void* NEW_GameUpdate(void* a1)
 
 static int NEW_DownloadManifest(AssetDownloader* a1, void* a2, void* a3, void* a4, void* a5, void* a6)
 {
-	PropertyWindow::Create();
 	AssetDownloader::Instance = a1;
 	return 0;
 }
