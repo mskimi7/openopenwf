@@ -56,6 +56,7 @@
     <Compile Include="Main.cs" />
     <Compile Include="NativeEvents\NativeEvent.cs" />
     <Compile Include="NativeEvents\RequestSuppressMsgNotifyEvent.cs" />
+    <Compile Include="NativeEvents\RequestTypeInfoEvent.cs" />
     <Compile Include="NativeEvents\RequestTypeListEvent.cs" />
     <Compile Include="NativeEvents\ResponseTypeListEvent.cs" />
     <Compile Include="NativeInterface.cs" />

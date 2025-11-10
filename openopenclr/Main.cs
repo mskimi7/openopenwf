@@ -43,6 +43,7 @@ namespace openopenclr
         {
             NativeInterface.Initialize(nativePointers);
 
+            // It's important to wait for all the managed DLLs to load before Warframe's entry point executes for... reasons...
             new Thread(FormThread).Start();
             while (InspectorForm == null || !InspectorForm.IsFormReady.WaitOne())
                 Thread.Sleep(15); // wait until form is ready

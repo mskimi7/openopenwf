@@ -11,6 +11,9 @@ namespace openopenclr
         private delegate void FreeNativeMemoryDelegate(IntPtr ptr);
         private static FreeNativeMemoryDelegate FreeNativeMemory;
 
+        internal delegate void LogToConsoleDelegate([MarshalAs(UnmanagedType.LPStr)] string msg);
+        internal static LogToConsoleDelegate LogToConsole;
+
         private delegate IntPtr GetNativeEventRawDelegate(out ulong dataSize);
         private static GetNativeEventRawDelegate GetNativeEventRaw;
 
@@ -30,7 +33,6 @@ namespace openopenclr
                     using (var br = new BinaryReader(ms))
                     {
                         NativeEventId eventId = (NativeEventId)br.ReadByte();
-                        Console.WriteLine($"Receiving a {eventId}");
                         switch (eventId)
                         {
                             case NativeEventId.ResponseTypeList:
@@ -61,9 +63,14 @@ namespace openopenclr
             }
         }
 
-        internal static void RequestTypeListRefresh()
+        internal static void RequestTypeList(bool requestAll)
         {
-            SendNativeEvent(new RequestTypeListEvent());
+            SendNativeEvent(new RequestTypeListEvent(requestAll));
+        }
+
+        internal static void RequestTypeInfo(string typeName)
+        {
+            SendNativeEvent(new RequestTypeInfoEvent(typeName));
         }
 
         internal static void SuppressTreeNodeEvents(bool shouldSuppress)
@@ -81,8 +88,9 @@ namespace openopenclr
             try
             {
                 FreeNativeMemory = Marshal.GetDelegateForFunctionPointer<FreeNativeMemoryDelegate>(new IntPtr(long.Parse(pointers[0])));
-                GetNativeEventRaw = Marshal.GetDelegateForFunctionPointer<GetNativeEventRawDelegate>(new IntPtr(long.Parse(pointers[1])));
-                SendNativeEventRaw = Marshal.GetDelegateForFunctionPointer<SendNativeEventRawDelegate>(new IntPtr(long.Parse(pointers[2])));
+                LogToConsole = Marshal.GetDelegateForFunctionPointer<LogToConsoleDelegate>(new IntPtr(long.Parse(pointers[1])));
+                GetNativeEventRaw = Marshal.GetDelegateForFunctionPointer<GetNativeEventRawDelegate>(new IntPtr(long.Parse(pointers[2])));
+                SendNativeEventRaw = Marshal.GetDelegateForFunctionPointer<SendNativeEventRawDelegate>(new IntPtr(long.Parse(pointers[3])));
             }
             catch (IndexOutOfRangeException)
             {

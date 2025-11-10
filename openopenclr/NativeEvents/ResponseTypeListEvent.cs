@@ -15,12 +15,8 @@ namespace openopenclr.NativeEvents
             ResponseTypeListEvent result = new ResponseTypeListEvent();
             
             int typeCount = reader.ReadInt32();
-
             for (long i = 0; i < typeCount; ++i)
-            {
-                int stringSize = reader.ReadInt32();
-                result.AllTypes.Add(Encoding.ASCII.GetString(reader.ReadBytes(stringSize)));
-            }
+                result.AllTypes.Add(reader.ReadInt32PrefixedString());
 
             return result;
         }

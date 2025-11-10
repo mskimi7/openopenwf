@@ -50,6 +50,8 @@ namespace openopenclr
 
         internal EventWaitHandle IsFormReady { get; } = new EventWaitHandle(false, EventResetMode.ManualReset);
 
+        private int totalTypes = 0;
+
         public Inspector()
         {
             InitializeComponent();
@@ -61,10 +63,13 @@ namespace openopenclr
             treeView1.Enabled = !isRefreshing;
             button1.Enabled = !isRefreshing;
             button1.Text = isRefreshing ? "Refreshing..." : "Refresh list";
+            label1.Text = isRefreshing ? "Refreshing, please wait..." : $"{totalTypes} types found";
         }
 
         internal void PopulateTreeView(List<string> allTypes)
         {
+            totalTypes = 0;
+
             TypeTreeEntry rootEntry = new TypeTreeEntry(0);
 
             allTypes.Sort();
@@ -72,7 +77,7 @@ namespace openopenclr
             {
                 if (!type.StartsWith("/"))
                 {
-                    Console.WriteLine($"Ignored abnormal type: {type}");
+                    NativeInterface.LogToConsole($"Ignored abnormal type: {type}");
                     continue;
                 }
 
@@ -113,6 +118,7 @@ namespace openopenclr
                     {
                         foreach (var file in children.files)
                         {
+                            ++totalTypes;
                             newEntry.Nodes.Add(fullPath + file, file);
                         }
                     }
@@ -126,7 +132,6 @@ namespace openopenclr
         {
             BeginInvoke((Action)(() =>
             {
-                Console.WriteLine("erasing");
                 treeView1.BeginUpdate();
                 try
                 {
@@ -139,7 +144,6 @@ namespace openopenclr
                     treeView1.Nodes.Clear();
                     NativeInterface.SuppressTreeNodeEvents(false);
 
-                    Console.WriteLine("populating");
                     PopulateTreeView(evt.AllTypes);
                     if (treeView1.Nodes.Count > 0)
                         treeView1.Nodes[0].Expand();
@@ -149,14 +153,27 @@ namespace openopenclr
                     treeView1.EndUpdate();
                     SetRefreshing(false);
                 }
-                Console.WriteLine("done");
             }));
         }
 
         private void button1_Click(object sender, EventArgs e)
         {
-            NativeInterface.RequestTypeListRefresh();
+            NativeInterface.RequestTypeList(!checkBox1.Checked);
             SetRefreshing(true);
+        }
+
+        private void treeView1_AfterSelect(object sender, TreeViewEventArgs e)
+        {
+            if (!e.Node.Name.EndsWith("/"))
+                NativeInterface.RequestTypeInfo(e.Node.Name);
+        }
+
+        private void linkLabel1_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+        {
+            MessageBox.Show("Checking this option will hide most irrelevant types that do not use property text. " +
+                "It is recommended to ALWAYS keep it checked unless you're certain that the type you're looking for is behind this option.\n\n" +
+                "Toggling this option requires a refresh.",
+                "OpenWF Enabler", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
     }
 }

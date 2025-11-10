@@ -236,13 +236,40 @@ static void* NEW_GameUpdate(void* a1)
 		{
 			case NativeEventId::RequestTypeList:
 			{
-				std::unique_ptr<std::unordered_set<std::string>> manifestTypes = AssetDownloader::Instance->GetManifestTypes();
-				std::unique_ptr<std::unordered_set<std::string>> registeredTypes = TypeMgr::GetInstance()->GetRegisteredTypes();
+				RequestTypeListEvent* requestEvt = (RequestTypeListEvent*)event.get();
+
+				std::unique_ptr<std::vector<CompressedTypeName>> manifestTypes = AssetDownloader::Instance->GetManifestTypes(); // all types not in Packages.bin (and others)
+				std::unique_ptr<std::vector<CompressedTypeName>> registeredTypes = TypeMgr::GetInstance()->GetRegisteredTypes(); // all types in Packages.bin (and others)
+
+				std::unique_ptr<std::unordered_set<std::string>> stringifiedTypes = std::make_unique<std::unordered_set<std::string>>();
 
 				for (auto&& t : *registeredTypes)
-					manifestTypes->insert(t);
+					manifestTypes->push_back(t);
 
-				CLRInterop::SendTypeList(*manifestTypes);
+				for (auto&& t : *manifestTypes)
+				{
+					std::string typeName = g_ObjTypeNameMapping->GetName(t);
+					if (!requestEvt->fetchAllTypes)
+					{
+						if (typeName.find(".") != std::string::npos || typeName.starts_with("/Temp/"))
+							continue;
+					}
+					
+					stringifiedTypes->insert(typeName);
+				}
+
+				CLRInterop::SendTypeList(*stringifiedTypes);
+				break;
+			}
+
+			case NativeEventId::RequestTypeInfo:
+			{
+				RequestTypeInfoEvent* requestEvt = (RequestTypeInfoEvent*)event.get();
+
+				TypeInfoUI typeInfo;
+				typeInfo.errorMessage = "Not implemented yet";
+
+				CLRInterop::SendTypeInfo(typeInfo);
 				break;
 			}
 

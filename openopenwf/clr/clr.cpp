@@ -22,7 +22,6 @@ static unsigned char* GetNativeEvent(size_t* bufferSize)
 	unsigned char* buffer = pendingNativeEvents.front().first.release();
 	pendingNativeEvents.pop();
 
-	OWFLog("Returning a native event");
 	return buffer;
 }
 
@@ -45,8 +44,6 @@ static void SendNativeEvent(unsigned char* buffer, size_t bufferSize)
 			break;
 	}
 
-	OWFLog("Managed event pushed");
-
 	if (!resultEvt)
 		return;
 
@@ -59,9 +56,15 @@ static void FreeNativeMemory(unsigned char* ptr)
 	delete ptr;
 }
 
+static void LogToConsole(const char* msg)
+{
+	OWFLog("{}", msg);
+}
+
 static std::wstring BuildInitArgument()
 {
-	return std::to_wstring((ULONG_PTR)FreeNativeMemory) + L',' + std::to_wstring((ULONG_PTR)GetNativeEvent) + L',' + std::to_wstring((ULONG_PTR)SendNativeEvent);
+	return std::to_wstring((ULONG_PTR)FreeNativeMemory) + L',' + std::to_wstring((ULONG_PTR)LogToConsole) + L',' + std::to_wstring((ULONG_PTR)GetNativeEvent) +
+		L',' + std::to_wstring((ULONG_PTR)SendNativeEvent);
 }
 
 void InitCLR()
@@ -140,14 +143,45 @@ void CLRInterop::SendTypeList(const std::unordered_set<std::string>& allTypeList
 	PushNativeEvent(ss);
 }
 
+void CLRInterop::SendTypeInfo(const TypeInfoUI& typeInfo)
+{
+	BinaryWriteStream ss;
+
+	ss.Write(NativeEventId::ResponseTypeInfo);
+	ss.Write((int)typeInfo.errorMessage.size());
+	ss.WriteBytes(typeInfo.errorMessage.data(), typeInfo.errorMessage.size());
+	if (!typeInfo.errorMessage.empty())
+	{
+		PushNativeEvent(ss);
+		return;
+	}
+
+	ss.Write((int)typeInfo.parentTypes.size());
+	for (auto&& type : typeInfo.parentTypes)
+	{
+		ss.Write((int)type.size());
+		ss.WriteBytes(type.data(), type.size());
+	}
+
+	ss.Write((int)typeInfo.propertyText.size());
+	ss.WriteBytes(typeInfo.propertyText.data(), typeInfo.propertyText.size());
+
+	PushNativeEvent(ss);
+}
+
 std::unique_ptr<RequestTypeListEvent> RequestTypeListEvent::Deserialize(BinaryReadStream& stream)
 {
-	return std::make_unique<RequestTypeListEvent>();
+	std::unique_ptr<RequestTypeListEvent> evt = std::make_unique<RequestTypeListEvent>();
+	evt->fetchAllTypes = stream.Read<unsigned char>() != 0;
+
+	return evt;
 }
 
 std::unique_ptr<RequestTypeInfoEvent> RequestTypeInfoEvent::Deserialize(BinaryReadStream& stream)
 {
-	return std::make_unique<RequestTypeInfoEvent>();
+	std::unique_ptr<RequestTypeInfoEvent> evt = std::make_unique<RequestTypeInfoEvent>();
+
+	return evt;
 }
 
 std::unique_ptr<RequestSuppressMsgNotifyEvent> RequestSuppressMsgNotifyEvent::Deserialize(BinaryReadStream& stream)
