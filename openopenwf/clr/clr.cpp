@@ -6,6 +6,7 @@
 #pragma comment(lib, "mscoree.lib")
 
 #include <queue>
+#include "../json.hpp"
 
 CriticalSectionOwner eventsLock;
 std::queue<std::unique_ptr<NativeEvent>> pendingManagedEvents;
@@ -28,20 +29,31 @@ static unsigned char* GetNativeEvent(size_t* bufferSize)
 // CLR -> native
 static void SendNativeEvent(unsigned char* buffer, size_t bufferSize)
 {
-	BinaryReadStream s(buffer, bufferSize);
-	std::unique_ptr<NativeEvent> resultEvt;
+	if (bufferSize == 0)
+		return;
 
-	switch ((NativeEventId)s.Read<unsigned char>())
+	std::unique_ptr<NativeEvent> resultEvt;
+	NativeEventId eventType = (NativeEventId)buffer[0];
+
+	try
 	{
-		case NativeEventId::RequestTypeList:
-			resultEvt = RequestTypeListEvent::Deserialize(s);
-			break;
-		case NativeEventId::RequestTypeInfo:
-			resultEvt = RequestTypeInfoEvent::Deserialize(s);
-			break;
-		case NativeEventId::RequestSuppressMsgNotify:
-			resultEvt = RequestSuppressMsgNotifyEvent::Deserialize(s);
-			break;
+		json eventInfo = json::parse((char*)buffer + 1, (char*)buffer + bufferSize);
+		switch (eventType)
+		{
+			case NativeEventId::RequestTypeList:
+				resultEvt = RequestTypeListEvent::Deserialize(eventInfo);
+				break;
+			case NativeEventId::RequestTypeInfo:
+				resultEvt = RequestTypeInfoEvent::Deserialize(eventInfo);
+				break;
+			case NativeEventId::RequestSuppressMsgNotify:
+				resultEvt = RequestSuppressMsgNotifyEvent::Deserialize(eventInfo);
+				break;
+		}
+	}
+	catch (const std::exception& ex)
+	{
+		OWFLog("Exception processing a CLR -> Native event of type {}\n{}", (int)eventType, ex.what());
 	}
 
 	if (!resultEvt)
@@ -106,15 +118,15 @@ void InitCLR()
 	OWFLog("CLR successfully initialized"); // horror!
 }
 
-void CLRInterop::PushNativeEvent(const BinaryWriteStream& stream)
+void CLRInterop::PushNativeEvent(NativeEventId eventId, const std::string& jsonPayload)
 {
 	auto lock = eventsLock.Acquire();
 
-	const auto& origBuffer = stream.GetBuffer();
-	std::unique_ptr<unsigned char[]> newBuffer = std::make_unique_for_overwrite<unsigned char[]>(origBuffer.size());
-	memcpy(newBuffer.get(), origBuffer.data(), origBuffer.size());
+	std::unique_ptr<unsigned char[]> newBuffer = std::make_unique_for_overwrite<unsigned char[]>(jsonPayload.size() + 1);
+	newBuffer[0] = (unsigned char)eventId;
+	memcpy(newBuffer.get() + 1, jsonPayload.data(), jsonPayload.size());
 
-	pendingNativeEvents.push(std::make_pair<std::unique_ptr<unsigned char[]>, size_t>(std::move(newBuffer), origBuffer.size()));
+	pendingNativeEvents.push(std::make_pair<std::unique_ptr<unsigned char[]>, size_t>(std::move(newBuffer), jsonPayload.size() + 1));
 }
 
 std::unique_ptr<NativeEvent> CLRInterop::GetManagedEvent()
@@ -130,64 +142,43 @@ std::unique_ptr<NativeEvent> CLRInterop::GetManagedEvent()
 
 void CLRInterop::SendTypeList(const std::unordered_set<std::string>& allTypeList)
 {
-	BinaryWriteStream ss;
+	json j = {
+		{ "types", allTypeList }
+	};
 
-	ss.Write(NativeEventId::ResponseTypeList);
-	ss.Write((int)allTypeList.size());
-	for (auto&& type : allTypeList)
-	{
-		ss.Write((int)type.size());
-		ss.WriteBytes(type.data(), type.size());
-	}
-
-	PushNativeEvent(ss);
+	PushNativeEvent(NativeEventId::ResponseTypeList, j.dump());
 }
 
 void CLRInterop::SendTypeInfo(const TypeInfoUI& typeInfo)
 {
-	BinaryWriteStream ss;
+	json j = {
+		{ "error", typeInfo.errorMessage },
+		{ "parentTypes", typeInfo.parentTypes },
+		{ "propertyText", typeInfo.propertyText },
+	};
 
-	ss.Write(NativeEventId::ResponseTypeInfo);
-	ss.Write((int)typeInfo.errorMessage.size());
-	ss.WriteBytes(typeInfo.errorMessage.data(), typeInfo.errorMessage.size());
-	if (!typeInfo.errorMessage.empty())
-	{
-		PushNativeEvent(ss);
-		return;
-	}
-
-	ss.Write((int)typeInfo.parentTypes.size());
-	for (auto&& type : typeInfo.parentTypes)
-	{
-		ss.Write((int)type.size());
-		ss.WriteBytes(type.data(), type.size());
-	}
-
-	ss.Write((int)typeInfo.propertyText.size());
-	ss.WriteBytes(typeInfo.propertyText.data(), typeInfo.propertyText.size());
-
-	PushNativeEvent(ss);
+	PushNativeEvent(NativeEventId::ResponseTypeInfo, j.dump());
 }
 
-std::unique_ptr<RequestTypeListEvent> RequestTypeListEvent::Deserialize(BinaryReadStream& stream)
+std::unique_ptr<RequestTypeListEvent> RequestTypeListEvent::Deserialize(const json& j)
 {
 	std::unique_ptr<RequestTypeListEvent> evt = std::make_unique<RequestTypeListEvent>();
-	evt->fetchAllTypes = stream.Read<unsigned char>() != 0;
+	evt->fetchAllTypes = j.value<bool>("fetchAllTypes", false);
 
 	return evt;
 }
 
-std::unique_ptr<RequestTypeInfoEvent> RequestTypeInfoEvent::Deserialize(BinaryReadStream& stream)
+std::unique_ptr<RequestTypeInfoEvent> RequestTypeInfoEvent::Deserialize(const json& j)
 {
 	std::unique_ptr<RequestTypeInfoEvent> evt = std::make_unique<RequestTypeInfoEvent>();
 
 	return evt;
 }
 
-std::unique_ptr<RequestSuppressMsgNotifyEvent> RequestSuppressMsgNotifyEvent::Deserialize(BinaryReadStream& stream)
+std::unique_ptr<RequestSuppressMsgNotifyEvent> RequestSuppressMsgNotifyEvent::Deserialize(const json& j)
 {
 	std::unique_ptr<RequestSuppressMsgNotifyEvent> evt = std::make_unique<RequestSuppressMsgNotifyEvent>();
-	evt->shouldSuppress = stream.Read<unsigned char>() != 0;
+	evt->shouldSuppress = j.value<bool>("shouldSuppress", false);
 
 	return evt;
 }

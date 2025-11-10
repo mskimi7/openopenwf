@@ -107,10 +107,7 @@
     <ClInclude Include="clr\clr.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="utils\stream_write.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="utils\stream_read.h">
+    <ClInclude Include="json_fwd.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

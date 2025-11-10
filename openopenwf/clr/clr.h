@@ -6,8 +6,9 @@
 #include <unordered_set>
 
 #include "../utils/auto_cs.h"
-#include "../utils/stream_read.h"
-#include "../utils/stream_write.h"
+#include "../json_fwd.hpp"
+
+using json = nlohmann::json;
 
 enum class NativeEventId : unsigned char
 {
@@ -17,8 +18,6 @@ enum class NativeEventId : unsigned char
     ResponseTypeInfo = 3,
     RequestSuppressMsgNotify = 4,
 };
-
-template<> inline void BinaryWriteStream::Write(NativeEventId val) { Write((unsigned char)val); }
 
 struct TypeInfoUI {
     std::vector<std::string> parentTypes;
@@ -34,7 +33,7 @@ struct RequestTypeListEvent : NativeEvent {
     bool fetchAllTypes; // if false, potentially uninteresting types won't be listed
 
     virtual NativeEventId GetId() override { return NativeEventId::RequestTypeList; }
-    static std::unique_ptr<RequestTypeListEvent> Deserialize(BinaryReadStream& stream);
+    static std::unique_ptr<RequestTypeListEvent> Deserialize(const json& j);
 };
 
 struct ResponseTypeListEvent : NativeEvent {
@@ -45,7 +44,7 @@ struct RequestTypeInfoEvent : NativeEvent {
     std::string typeName;
 
     virtual NativeEventId GetId() override { return NativeEventId::RequestTypeInfo; }
-    static std::unique_ptr<RequestTypeInfoEvent> Deserialize(BinaryReadStream& stream);
+    static std::unique_ptr<RequestTypeInfoEvent> Deserialize(const json& j);
 };
 
 struct ResponseTypeInfoEvent : NativeEvent {
@@ -56,11 +55,11 @@ struct RequestSuppressMsgNotifyEvent : NativeEvent {
     bool shouldSuppress;
 
     virtual NativeEventId GetId() override { return NativeEventId::RequestSuppressMsgNotify; }
-    static std::unique_ptr<RequestSuppressMsgNotifyEvent> Deserialize(BinaryReadStream& stream);
+    static std::unique_ptr<RequestSuppressMsgNotifyEvent> Deserialize(const json& j);
 };
 
 namespace CLRInterop {
-    void PushNativeEvent(const BinaryWriteStream& stream);
+    void PushNativeEvent(NativeEventId eventId, const std::string& jsonPayload);
     std::unique_ptr<NativeEvent> GetManagedEvent();
 
     void SendTypeList(const std::unordered_set<std::string>& allTypeList);
