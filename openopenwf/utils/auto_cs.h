@@ -7,17 +7,16 @@ class ScopedLock {
 
 private:
 	CRITICAL_SECTION* cs;
-	bool released = false;
 
 	inline explicit ScopedLock(CRITICAL_SECTION* cs_) : cs(cs_) { EnterCriticalSection(this->cs); }
 
 public:
 	inline void Release()
 	{
-		if (!released)
+		if (this->cs)
 		{
-			released = true;
 			LeaveCriticalSection(this->cs);
+			this->cs = nullptr;
 		}
 	}
 
@@ -25,7 +24,7 @@ public:
 	ScopedLock(ScopedLock const&) = delete;
 	ScopedLock& operator=(ScopedLock const&) = delete;
 
-	inline ScopedLock(ScopedLock&& rhs) noexcept { this->cs = rhs.cs; rhs.released = true; }
+	inline ScopedLock(ScopedLock&& rhs) noexcept { this->cs = rhs.cs; rhs.cs = nullptr; }
 };
 
 class CriticalSectionOwner {

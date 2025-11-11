@@ -13,7 +13,7 @@
 #include "game_data/asset_downloader.h"
 #include "game_data/resources.h"
 #include "game_data/type_mgr.h"
-#include "ui/property_window.h"
+#include "clr/clr.h"
 
 #define REDIRECTOR_NAME "openopenwf_2"
 
@@ -26,6 +26,7 @@ inline char* g_entryPointAddress;
 inline DWORD g_entryPointOldProtect;
 
 inline std::wstring g_wfExeDirectory;
+inline bool g_DisableWin32NotifyMessages;
 
 std::wstring UTF8ToWide(const std::string& s);
 std::string WideToUTF8(const std::wstring& s);
@@ -45,6 +46,7 @@ std::vector<unsigned char*> SignatureScan(const char* pattern, const char* mask,
 std::string AESDecrypt(const std::string& inputData, const std::string& key, const std::string& iv);
 
 void LoadConfig();
+void InitCLR();
 void PlaceHooks();
 std::string OWFGetBuildLabel();
 

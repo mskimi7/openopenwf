@@ -12,6 +12,6 @@ struct AssetDownloader {
 	inline void* GetManifestTree() { return MEMBER_OFFSET(void*, 0x1D0); }
 	inline WarframeString* GetCacheManifestHash() { return MEMBER_OFFSET(WarframeString*, 0x1F0); }
 
-	std::unique_ptr<std::unordered_set<std::string>> GetManifestTypes();
+	std::unique_ptr<std::vector<CompressedTypeName>> GetManifestTypes();
 	static inline AssetDownloader* Instance;
 };

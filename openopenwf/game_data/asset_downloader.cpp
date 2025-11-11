@@ -26,9 +26,9 @@ struct TreeBlock {
 	TreeEntryVector data[3];
 };
 
-std::unique_ptr<std::unordered_set<std::string>> AssetDownloader::GetManifestTypes()
+std::unique_ptr<std::vector<CompressedTypeName>> AssetDownloader::GetManifestTypes()
 {
-	std::unordered_set<CompressedTypeName, CompressedTypeName::Hash> allNames;
+	std::unique_ptr<std::vector<CompressedTypeName>> allNames = std::make_unique<std::vector<CompressedTypeName>>();
 
 	EnterCriticalSection(this->GetManifestTreeLock());
 
@@ -36,20 +36,16 @@ std::unique_ptr<std::unordered_set<std::string>> AssetDownloader::GetManifestTyp
 	for (TreeBlock* treeBlock = *(TreeBlock**)manifestTree; treeBlock != manifestTree; treeBlock = treeBlock->next)
 	{
 		for (size_t i = 0; i < treeBlock->data[0].size(); ++i)
-			allNames.insert(treeBlock->data[0].ptr[i].name);
+			allNames->push_back(treeBlock->data[0].ptr[i].name);
 
 		for (size_t i = 0; i < treeBlock->data[1].size(); ++i)
-			allNames.insert(treeBlock->data[1].ptr[i].name);
+			allNames->push_back(treeBlock->data[1].ptr[i].name);
 
 		for (size_t i = 0; i < treeBlock->data[2].size(); ++i)
-			allNames.insert(treeBlock->data[2].ptr[i].name);
+			allNames->push_back(treeBlock->data[2].ptr[i].name);
 	}
-
-	std::unique_ptr<std::unordered_set<std::string>> convertedNames = std::make_unique<std::unordered_set<std::string>>();
-	for (auto&& name : allNames)
-		convertedNames->insert(std::string(g_ObjTypeNameMapping->GetName(name.pathIndex)) + g_ObjTypeNameMapping->GetName(name.nameIndex));
 
 	LeaveCriticalSection(this->GetManifestTreeLock());
 
-	return convertedNames;
+	return allNames;
 }
