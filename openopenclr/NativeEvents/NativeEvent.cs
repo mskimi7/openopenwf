@@ -1,5 +1,4 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 using System.Text;
 
 namespace openopenclr.NativeEvents
@@ -16,10 +15,7 @@ namespace openopenclr.NativeEvents
     internal abstract class NativeEvent
     {
         internal abstract NativeEventId Id { get; }
-        internal virtual void Serialize(BinaryWriter writer)
-        {
-            writer.Write((byte)Id);
-        }
+        internal virtual string GetAsJsonSerialized() => "{}";
     }
 
     public static class BinaryStreamExtensions

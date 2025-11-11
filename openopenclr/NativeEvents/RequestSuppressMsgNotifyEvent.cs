@@ -1,4 +1,4 @@
-﻿using System.IO;
+﻿using Newtonsoft.Json;
 
 namespace openopenclr.NativeEvents
 {
@@ -8,10 +8,12 @@ namespace openopenclr.NativeEvents
 
         internal override NativeEventId Id => NativeEventId.RequestSuppressMsgNotify;
 
-        internal override void Serialize(BinaryWriter writer)
+        internal override string GetAsJsonSerialized()
         {
-            base.Serialize(writer);
-            writer.Write(shouldSuppress);
+            return JsonConvert.SerializeObject(new
+            {
+                shouldSuppress = shouldSuppress
+            });
         }
 
         internal RequestSuppressMsgNotifyEvent(bool shouldSuppress)

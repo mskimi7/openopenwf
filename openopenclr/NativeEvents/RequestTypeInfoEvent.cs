@@ -1,4 +1,4 @@
-﻿using System.IO;
+﻿using Newtonsoft.Json;
 
 namespace openopenclr.NativeEvents
 {
@@ -8,10 +8,12 @@ namespace openopenclr.NativeEvents
 
         internal override NativeEventId Id => NativeEventId.RequestTypeInfo;
 
-        internal override void Serialize(BinaryWriter writer)
+        internal override string GetAsJsonSerialized()
         {
-            base.Serialize(writer);
-            writer.WriteInt32PrefixedString(typeName);
+            return JsonConvert.SerializeObject(new
+            {
+                typeName = typeName
+            });
         }
 
         internal RequestTypeInfoEvent(string typeName)

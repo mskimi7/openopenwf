@@ -24,6 +24,9 @@ namespace openopenclr
                 case NativeEventId.ResponseTypeList:
                     InspectorForm.OnTypeListReceived((ResponseTypeListEvent)evt);
                     break;
+                case NativeEventId.ResponseTypeInfo:
+                    InspectorForm.OnTypeInfoReceived((ResponseTypeInfoEvent)evt);
+                    break;
             }
         }
 

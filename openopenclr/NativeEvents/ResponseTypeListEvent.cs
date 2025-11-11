@@ -1,24 +1,20 @@
 ﻿using System.Collections.Generic;
-using System.IO;
-using System.Text;
+using Newtonsoft.Json.Linq;
 
 namespace openopenclr.NativeEvents
 {
     internal class ResponseTypeListEvent : NativeEvent
     {
-        internal List<string> AllTypes { get; } = new List<string>();
+        internal List<string> AllTypes { get; set; } = new List<string>();
 
         internal override NativeEventId Id => NativeEventId.ResponseTypeList;
 
-        internal static ResponseTypeListEvent Deserialize(BinaryReader reader)
+        internal static ResponseTypeListEvent Deserialize(JObject jsonObject)
         {
-            ResponseTypeListEvent result = new ResponseTypeListEvent();
-            
-            int typeCount = reader.ReadInt32();
-            for (long i = 0; i < typeCount; ++i)
-                result.AllTypes.Add(reader.ReadInt32PrefixedString());
-
-            return result;
+            return new ResponseTypeListEvent
+            {
+                AllTypes = jsonObject["types"].ToObject<List<string>>()
+            };
         }
     }
 }

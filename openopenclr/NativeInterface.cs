@@ -1,7 +1,9 @@
 ﻿using System;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Windows.Forms;
+using Newtonsoft.Json.Linq;
 using openopenclr.NativeEvents;
 
 namespace openopenclr
@@ -33,10 +35,14 @@ namespace openopenclr
                     using (var br = new BinaryReader(ms))
                     {
                         NativeEventId eventId = (NativeEventId)br.ReadByte();
+                        JObject eventData = JObject.Parse(Encoding.UTF8.GetString(br.ReadBytes((int)(ms.Length - ms.Position))));
+
                         switch (eventId)
                         {
                             case NativeEventId.ResponseTypeList:
-                                return ResponseTypeListEvent.Deserialize(br);
+                                return ResponseTypeListEvent.Deserialize(eventData);
+                            case NativeEventId.ResponseTypeInfo:
+                                return ResponseTypeInfoEvent.Deserialize(eventData);
                         }
                     }
                 }
@@ -55,7 +61,8 @@ namespace openopenclr
             {
                 using (var bw = new BinaryWriter(ms))
                 {
-                    evt.Serialize(bw);
+                    bw.Write((byte)evt.Id);
+                    bw.Write(Encoding.UTF8.GetBytes(evt.GetAsJsonSerialized()));
                 }
 
                 byte[] arr = ms.ToArray();

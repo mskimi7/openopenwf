@@ -266,8 +266,23 @@ static void* NEW_GameUpdate(void* a1)
 			{
 				RequestTypeInfoEvent* requestEvt = (RequestTypeInfoEvent*)event.get();
 
+				ResourceInfo rinfo = ResourceMgr::Instance->LoadResource(requestEvt->typeName);
 				TypeInfoUI typeInfo;
-				typeInfo.errorMessage = "Not implemented yet";
+				if (!rinfo.type)
+				{
+					typeInfo.errorMessage = "Failed to fetch type! Check EE.log for details.";
+				}
+				else
+				{
+					ObjectType* tt = rinfo.type;
+
+					do {
+						typeInfo.parentTypes.push_back(g_ObjTypeNameMapping->GetName(tt->GetName()));
+						tt = tt->parent;
+					} while (tt);
+
+					typeInfo.propertyText = rinfo.propertyText;
+				}
 
 				CLRInterop::SendTypeInfo(typeInfo);
 				break;

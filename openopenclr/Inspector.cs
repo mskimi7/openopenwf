@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
+using System.Linq;
 using System.Threading;
 using System.Windows.Forms;
 using openopenclr.NativeEvents;
@@ -50,6 +52,8 @@ namespace openopenclr
 
         internal EventWaitHandle IsFormReady { get; } = new EventWaitHandle(false, EventResetMode.ManualReset);
 
+        private readonly Dictionary<string, TreeNode> allFileNodes = new Dictionary<string, TreeNode>();
+        private readonly List<LinkLabel> extraInheritanceControls = new List<LinkLabel>();
         private int totalTypes = 0;
 
         public Inspector()
@@ -58,12 +62,75 @@ namespace openopenclr
             IsFormReady.Set();
         }
 
+        private void OnInheritanceLinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+        {
+            LinkLabel label = (LinkLabel)sender;
+            if (!allFileNodes.TryGetValue(label.Text, out TreeNode node))
+            {
+                MessageBox.Show("Could not navigate to the selected type (not found)", "OpenWF Enabler", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            treeView1.SelectedNode = node;
+            treeView1.Focus();
+        }
+
         internal void SetRefreshing(bool isRefreshing)
         {
             treeView1.Enabled = !isRefreshing;
             button1.Enabled = !isRefreshing;
             button1.Text = isRefreshing ? "Refreshing..." : "Refresh list";
             label1.Text = isRefreshing ? "Refreshing, please wait..." : $"{totalTypes} types found";
+        }
+
+        internal void SetInheritanceInfo(List<string> inheritanceChain)
+        {
+            if (inheritanceChain == null || inheritanceChain.Count == 0)
+            {
+                foreach (var linkLabel in extraInheritanceControls)
+                {
+                    linkLabel.Dispose();
+                    tabPage1.Controls.Remove(linkLabel);
+                }
+
+                extraInheritanceControls.Clear();
+
+                label3.Visible = false;
+                label4.Visible = false;
+                linkLabel2.Visible = false;
+            }
+            else
+            {
+                inheritanceChain = inheritanceChain.Reverse<string>().ToList(); // make a copy
+                linkLabel2.Text = inheritanceChain[0];
+
+                LinkLabel prevLinkLabel = linkLabel2;
+                foreach (var type in inheritanceChain.Skip(1))
+                {
+                    LinkLabel ll = new LinkLabel
+                    {
+                        AutoSize = true,
+                        Visible = true,
+                        TabIndex = prevLinkLabel.TabIndex + 1,
+                        TabStop = true,
+                        Text = type,
+                        Location = new Point(prevLinkLabel.Location.X + 8, prevLinkLabel.Location.Y + 16)
+                    };
+
+                    tabPage1.Controls.Add(ll);
+                    extraInheritanceControls.Add(ll);
+
+                    ll.LinkClicked += OnInheritanceLinkClicked;
+
+                    prevLinkLabel = ll;
+                }
+
+                label3.Visible = true;
+                label4.Visible = true;
+                linkLabel2.Visible = true;
+            }
+
+            tabPage1.Refresh();
         }
 
         internal void PopulateTreeView(List<string> allTypes)
@@ -119,7 +186,9 @@ namespace openopenclr
                         foreach (var file in children.files)
                         {
                             ++totalTypes;
-                            newEntry.Nodes.Add(fullPath + file, file);
+
+                            string fullName = fullPath + file;
+                            allFileNodes[fullName] = newEntry.Nodes.Add(fullName, file);
                         }
                     }
                 }
@@ -142,6 +211,7 @@ namespace openopenclr
                     // - we don't care about WM_NOTIFY anyway
                     NativeInterface.SuppressTreeNodeEvents(true);
                     treeView1.Nodes.Clear();
+                    allFileNodes.Clear();
                     NativeInterface.SuppressTreeNodeEvents(false);
 
                     PopulateTreeView(evt.AllTypes);
@@ -152,6 +222,27 @@ namespace openopenclr
                 {
                     treeView1.EndUpdate();
                     SetRefreshing(false);
+                }
+            }));
+        }
+
+        internal void OnTypeInfoReceived(ResponseTypeInfoEvent evt)
+        {
+            BeginInvoke((Action)(() =>
+            {
+                label2.ResetText();
+                SetInheritanceInfo(null);
+
+                NativeInterface.LogToConsole($"Is error {evt.IsError}");
+                if (evt.IsError)
+                {
+                    label2.Text = evt.ErrorMessage;
+                }
+                else
+                {
+                    NativeInterface.LogToConsole($"Setting inheritance info {evt.InheritanceChain.Count}");
+                    label2.Text = $"Type info for {evt.InheritanceChain[0]}";
+                    SetInheritanceInfo(evt.InheritanceChain);
                 }
             }));
         }

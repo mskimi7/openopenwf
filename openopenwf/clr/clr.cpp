@@ -157,6 +157,8 @@ void CLRInterop::SendTypeInfo(const TypeInfoUI& typeInfo)
 		{ "propertyText", typeInfo.propertyText },
 	};
 
+	OWFLog("{}", j.dump());
+
 	PushNativeEvent(NativeEventId::ResponseTypeInfo, j.dump());
 }
 
@@ -171,6 +173,7 @@ std::unique_ptr<RequestTypeListEvent> RequestTypeListEvent::Deserialize(const js
 std::unique_ptr<RequestTypeInfoEvent> RequestTypeInfoEvent::Deserialize(const json& j)
 {
 	std::unique_ptr<RequestTypeInfoEvent> evt = std::make_unique<RequestTypeInfoEvent>();
+	evt->typeName = j.value<std::string>("typeName", "");
 
 	return evt;
 }
