@@ -157,8 +157,6 @@ void CLRInterop::SendTypeInfo(const TypeInfoUI& typeInfo)
 		{ "propertyText", typeInfo.propertyText },
 	};
 
-	OWFLog("{}", j.dump());
-
 	PushNativeEvent(NativeEventId::ResponseTypeInfo, j.dump());
 }
 

@@ -233,14 +233,12 @@ namespace openopenclr
                 label2.ResetText();
                 SetInheritanceInfo(null);
 
-                NativeInterface.LogToConsole($"Is error {evt.IsError}");
                 if (evt.IsError)
                 {
                     label2.Text = evt.ErrorMessage;
                 }
                 else
                 {
-                    NativeInterface.LogToConsole($"Setting inheritance info {evt.InheritanceChain.Count}");
                     label2.Text = $"Type info for {evt.InheritanceChain[0]}";
                     SetInheritanceInfo(evt.InheritanceChain);
                 }
