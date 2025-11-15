@@ -6,7 +6,8 @@ namespace openopenclr.NativeEvents
     internal class ResponseTypeInfoEvent : NativeEvent
     {
         internal string ErrorMessage { get; set; } = "";
-        internal string PropertyText { get; set; } = "";
+        internal string PropertyTextOwn { get; set; } = ""; // own property text (not including parent fields)
+        internal string PropertyTextEntire { get; set; } = ""; // whole property text (including parent fields)
         internal List<string> InheritanceChain { get; set; } = new List<string>();
 
         internal bool IsError => !string.IsNullOrEmpty(ErrorMessage);
@@ -22,7 +23,8 @@ namespace openopenclr.NativeEvents
             return new ResponseTypeInfoEvent
             {
                 ErrorMessage = errorMsg,
-                PropertyText = jsonObject["propertyText"].ToObject<string>(),
+                PropertyTextOwn = jsonObject["propertyTextOwn"].ToObject<string>(),
+                PropertyTextEntire = jsonObject["propertyTextEntire"].ToObject<string>(),
                 InheritanceChain = jsonObject["parentTypes"].ToObject<List<string>>()
             };
         }

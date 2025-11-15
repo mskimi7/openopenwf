@@ -65,6 +65,7 @@
     <Compile Include="NativeEvents\ResponseTypeListEvent.cs" />
     <Compile Include="NativeInterface.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="PropertyText.cs" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Inspector.resx">
