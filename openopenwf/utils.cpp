@@ -32,30 +32,6 @@ std::string OWFGetBuildLabel()
 	return fullBuildLabel.substr(0, spaceIndex);
 }
 
-std::wstring UTF8ToWide(const std::string& s)
-{
-	int wideLen = MultiByteToWideChar(CP_UTF8, 0, s.c_str(), (int)s.size(), nullptr, 0);
-	if (wideLen == 0)
-		return L"";
-
-	std::wstring wide(wideLen, 0);
-	MultiByteToWideChar(CP_UTF8, 0, s.c_str(), (int)s.size(), &wide[0], wideLen);
-
-	return wide;
-}
-
-std::string WideToUTF8(const std::wstring& s)
-{
-	int mbLen = WideCharToMultiByte(CP_UTF8, 0, s.c_str(), (int)s.size(), nullptr, 0, nullptr, nullptr);
-	if (mbLen == 0)
-		return "";
-
-	std::string multibyte(mbLen, 0);
-	WideCharToMultiByte(CP_UTF8, 0, s.c_str(), (int)s.size(), &multibyte[0], mbLen, nullptr, nullptr);
-
-	return multibyte;
-}
-
 std::string AESDecrypt(const std::string& inputData, const std::string& key, const std::string& iv)
 {
 	BCRYPT_ALG_HANDLE algo = 0;

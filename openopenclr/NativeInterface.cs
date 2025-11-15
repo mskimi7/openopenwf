@@ -43,6 +43,8 @@ namespace openopenclr
                                 return ResponseTypeListEvent.Deserialize(eventData);
                             case NativeEventId.ResponseTypeInfo:
                                 return ResponseTypeInfoEvent.Deserialize(eventData);
+                            case NativeEventId.ResponseShowInspector:
+                                return ResponseShowInspectorEvent.Deserialize(eventData);
                         }
                     }
                 }

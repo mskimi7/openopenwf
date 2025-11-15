@@ -44,10 +44,13 @@ static bool IsValidWarframePath(const std::wstring& warframeExecutablePath)
 	return tocFilesFound >= 10;
 }
 
-std::wstring GuessWarframeSettings(std::optional<std::wstring>& language, std::optional<bool>& isDx11)
+std::wstring GuessWarframeSettings(std::optional<std::wstring>& language, std::optional<bool>& isDx11, const std::wstring& savedWarframePath)
 {
 	wchar_t regValue[512];
 	DWORD regValueSize = sizeof(regValue);
+
+	if (IsValidWarframePath(savedWarframePath))
+		return savedWarframePath;
 
 	if (RegGetValueW(HKEY_CURRENT_USER, L"Software\\Digital Extremes\\Warframe\\Launcher", L"DownloadDir", RRF_RT_REG_SZ, nullptr, regValue, &regValueSize) == ERROR_SUCCESS)
 	{

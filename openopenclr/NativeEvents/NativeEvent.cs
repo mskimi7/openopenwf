@@ -9,7 +9,8 @@ namespace openopenclr.NativeEvents
         ResponseTypeList = 1,
         RequestTypeInfo = 2,
         ResponseTypeInfo = 3,
-        RequestSuppressMsgNotify = 4
+        RequestSuppressMsgNotify = 4,
+        ResponseShowInspector = 5
     }
 
     internal abstract class NativeEvent

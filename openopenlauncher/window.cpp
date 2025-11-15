@@ -102,7 +102,10 @@ static void StartWarframe()
 	EnableWindow(startButton, false);
 
 	if (LaunchWarframe(mainWindow, warframePath, dllPath, commandLineArgs))
+	{
+		SaveLaunchSettings(warframePath, availableLanguages[selectedLangIdx].code, selectedDxIdx == 0);
 		ExitProcess(0);
+	}
 
 	EnableWindow(startButton, true);
 }
@@ -156,27 +159,29 @@ static void FillDefaults()
 	std::optional<std::wstring> languageSetting;
 	std::optional<bool> isDx11Setting;
 
-	std::wstring wfPath = GuessWarframeSettings(languageSetting, isDx11Setting);
+	std::optional<LaunchSettings> storedSettings = LoadLaunchSettings();
+	std::wstring wfPath = GuessWarframeSettings(languageSetting, isDx11Setting, storedSettings.has_value() ? storedSettings->warframeExePath : L"");
+
 	if (!wfPath.empty())
 	{
 		SetWindowTextW(wfTextbox, wfPath.c_str());
 
-		if (languageSetting.has_value())
+		std::wstring targetLang = storedSettings.has_value() ? storedSettings->langCode : (languageSetting.has_value() ? languageSetting.value() : L"");
+		bool targetIsDx11 = storedSettings.has_value() ? storedSettings->isDx11 : (!isDx11Setting.has_value() || isDx11Setting.value() == true);
+
+		for (size_t i = 0; i < std::size(availableLanguages); ++i)
 		{
-			for (size_t i = 0; i < std::size(availableLanguages); ++i)
+			if (wcscmp(availableLanguages[i].code, targetLang.c_str()) == 0)
 			{
-				if (wcscmp(availableLanguages[i].code, languageSetting.value().c_str()) == 0)
-				{
-					SendMessageW(langCombobox, CB_SETCURSEL, i, 0);
-					goto setGraphics;
-				}
+				SendMessageW(langCombobox, CB_SETCURSEL, i, 0);
+				goto setGraphics;
 			}
 		}
 
 		SendMessageW(langCombobox, CB_SETCURSEL, 1, 0); // en
 
 	setGraphics:
-		SendMessageW(dxCombobox, CB_SETCURSEL, (!isDx11Setting.has_value() || isDx11Setting.value() == true) ? 0 : 1, 0);
+		SendMessageW(dxCombobox, CB_SETCURSEL, targetIsDx11 ? 0 : 1, 0);
 	}
 }
 

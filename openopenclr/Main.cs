@@ -7,14 +7,21 @@ namespace openopenclr
     public static class Program
     {
         private static Inspector InspectorForm;
+        private static int InspectorShowRequested;
 
         static void FormThread()
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
-            InspectorForm = new Inspector();
-            Application.Run(InspectorForm);
+            Interlocked.Exchange(ref InspectorForm, new Inspector());
+            for (; ;)
+            {
+                if (Interlocked.CompareExchange(ref InspectorShowRequested, 0, 1) == 1)
+                    Application.Run(InspectorForm);
+                else
+                    Thread.Sleep(15);
+            }
         }
 
         static void HandleEvent(NativeEvent evt)
@@ -27,6 +34,9 @@ namespace openopenclr
                 case NativeEventId.ResponseTypeInfo:
                     InspectorForm.OnTypeInfoReceived((ResponseTypeInfoEvent)evt);
                     break;
+                case NativeEventId.ResponseShowInspector:
+                    Interlocked.Exchange(ref InspectorShowRequested, 1);
+                    break;
             }
         }
 
@@ -38,7 +48,7 @@ namespace openopenclr
                 if (evt != null)
                     HandleEvent(evt);
                 else
-                    Thread.Sleep(20);
+                    Thread.Sleep(15);
             }
         }
 

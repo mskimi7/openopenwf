@@ -85,7 +85,9 @@ void InitCLR()
 	if (!GetModuleFileNameW(g_hInstDll, dllPath, std::size(dllPath)))
 		FATAL_EXIT(std::format("Could not obtain name of the openopenwf DLL: code {}", GetLastError()));
 
-	wcscpy(PathFindFileNameW(dllPath), L"openopenclr.dll");
+	wcscpy(PathFindFileNameW(dllPath), L"openopenclrrel.dll"); // release build (merged with ilrepack)
+	if (!FileExists(dllPath))
+		wcscpy(PathFindFileNameW(dllPath), L"openopenclr.dll"); // dev build
 
 	ICLRMetaHost* clrMetaHost = nullptr;
 	HRESULT hResult = CLRCreateInstance(CLSID_CLRMetaHost, IID_PPV_ARGS(&clrMetaHost));

@@ -143,8 +143,6 @@ static int NEW_rsa_ossl_public_encrypt(int flen, unsigned char* from, unsigned c
 
 static void NEW_SendPostRequestUnified(decltype(OLD_SendPostRequest_1) origFunc, void* a1, WarframeString* url, WarframeString* bodyData, char requestType, void* a5, void* a6)
 {
-	TypeMgr::GetInstance()->GetRegisteredTypes();
-
 	WarframeString decryptedData;
 	std::string newURL = ReplaceURLHost(url->GetText());
 
@@ -204,25 +202,6 @@ static void NEW_SendGetRequest_2(WarframeString* url, void* a2, void* a3)
 {
 	return NEW_SendGetRequestUnified(OLD_SendGetRequest_2, url, a2, a3);
 }
-
-/*static std::unique_ptr<PropertyWindowTypeInfo> ResourceInfoToUITypeInfo(const ResourceInfo& info)
-{
-	std::unique_ptr<PropertyWindowTypeInfo> wndTypeInfo = std::make_unique<PropertyWindowTypeInfo>();
-	if (!info.type)
-	{
-		wndTypeInfo->errorMsg = "Failed to fetch type! Check EE.log for details.";
-		return wndTypeInfo;
-	}
-
-	ObjectType* tt = info.type;
-
-	do {
-		wndTypeInfo->inheritanceChain.push_back(g_ObjTypeNameMapping->GetName(tt->GetName()));
-		tt = tt->parent;
-	} while (tt);
-
-	return wndTypeInfo;
-}*/
 
 static void* NEW_GameUpdate(void* a1)
 {

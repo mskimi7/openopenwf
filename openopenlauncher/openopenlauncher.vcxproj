@@ -80,6 +80,7 @@
     <ClCompile Include="launch.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="path_guesser.cpp" />
+    <ClCompile Include="settings.cpp" />
     <ClCompile Include="window.cpp" />
   </ItemGroup>
   <ItemGroup>
