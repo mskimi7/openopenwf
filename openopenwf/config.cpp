@@ -10,6 +10,8 @@ void OpenWFConfig::PrintToConsole()
 {
 	OWFLog("  serverHost = {}", g_Config.serverHost);
 	OWFLog("  disableNRS = {}", g_Config.disableNRS);
+	OWFLog("  httpPort = {}", g_Config.httpPort);
+	OWFLog("  httpsPort = {}", g_Config.httpsPort);
 	OWFLog("");
 }
 
@@ -18,6 +20,8 @@ static void ParseConfig(const json& j)
 	OpenWFConfig newConfig;
 	newConfig.serverHost = j.value<std::string>("server_host", g_Config.serverHost);
 	newConfig.disableNRS = j.value<bool>("disable_nrs_connection", g_Config.disableNRS);
+	newConfig.httpPort = j.value<int>("http_port", g_Config.httpPort);
+	newConfig.httpsPort = j.value<int>("https_port", g_Config.httpsPort);
 
 	g_Config = newConfig;
 }

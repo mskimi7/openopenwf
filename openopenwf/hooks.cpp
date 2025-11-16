@@ -46,11 +46,18 @@ void WarframeString::Free()
 static std::string ReplaceURLHost(const std::string& origURL)
 {
 	size_t startReplaceIdx = 0;
+	int replacementPort = -1;
 
 	if (origURL.starts_with("http://"))
+	{
 		startReplaceIdx = 7;
+		replacementPort = g_Config.httpPort == 80 ? -1 : g_Config.httpPort;
+	}
 	else if (origURL.starts_with("https://"))
+	{
 		startReplaceIdx = 8;
+		replacementPort = g_Config.httpsPort == 443 ? -1 : g_Config.httpsPort;
+	}
 	else
 		return origURL;
 
@@ -58,7 +65,11 @@ static std::string ReplaceURLHost(const std::string& origURL)
 	if (endReplaceIdx == std::string::npos)
 		return origURL;
 
-	return origURL.substr(0, startReplaceIdx) + g_Config.serverHost + origURL.substr(endReplaceIdx);
+	std::string replacementHost = g_Config.serverHost;
+	if (replacementPort != -1)
+		replacementHost += ":"s + std::to_string(replacementPort);
+
+	return origURL.substr(0, startReplaceIdx) + replacementHost + origURL.substr(endReplaceIdx);
 }
 
 static INT WSAAPI NEW_getaddrinfo(PCSTR pNodeName, PCSTR pServiceName, ADDRINFOA* pHints, PADDRINFOA* ppResult)
