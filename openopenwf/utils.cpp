@@ -1,7 +1,10 @@
 #include "openwf.h"
 
+#include <wincrypt.h>
 #include <bcrypt.h>
 #include <winternl.h>
+
+#pragma comment(lib, "crypt32.lib")
 
 static CriticalSectionOwner loggerLock;
 
@@ -12,6 +15,20 @@ void OpenWFLog(const std::string& message)
 	DWORD charsWritten;
 	WriteConsoleA(GetStdHandle(STD_OUTPUT_HANDLE), message.data(), (DWORD)message.size(), &charsWritten, nullptr);
 	WriteConsoleA(GetStdHandle(STD_OUTPUT_HANDLE), "\n", 1u, &charsWritten, nullptr);
+}
+
+void OpenWFLogColor(const std::string& message, unsigned short color)
+{
+	auto lock = loggerLock.Acquire();
+
+	DWORD charsWritten;
+	CONSOLE_SCREEN_BUFFER_INFO cbi;
+	GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &cbi);
+	WORD prevColor = cbi.wAttributes;
+
+	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), color);
+	WriteConsoleA(GetStdHandle(STD_OUTPUT_HANDLE), message.data(), (DWORD)message.size(), &charsWritten, nullptr);
+	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), prevColor);
 }
 
 __declspec(noreturn) void OpenWFFatalExit(const std::string& reason, const std::string& func, const std::string& file, int line)
@@ -30,6 +47,22 @@ std::string OWFGetBuildLabel()
 		return fullBuildLabel;
 
 	return fullBuildLabel.substr(0, spaceIndex);
+}
+
+std::string Base64Encode(const std::string& inputData)
+{
+	DWORD requiredLen = 0;
+	if (!CryptBinaryToStringA((const unsigned char*)inputData.data(), (DWORD)inputData.size(), CRYPT_STRING_BASE64 | CRYPT_STRING_NOCRLF, nullptr, &requiredLen))
+		return "";
+
+	std::string result(requiredLen, 0);
+	if (!CryptBinaryToStringA((const unsigned char*)inputData.data(), (DWORD)inputData.size(), CRYPT_STRING_BASE64 | CRYPT_STRING_NOCRLF, result.data(), &requiredLen))
+		return "";
+
+	if (!result.empty() && result.back() == 0)
+		result.pop_back();
+
+	return result;
 }
 
 std::string AESDecrypt(const std::string& inputData, const std::string& key, const std::string& iv)

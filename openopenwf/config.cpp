@@ -8,7 +8,6 @@ using json = nlohmann::json;
 
 void OpenWFConfig::PrintToConsole()
 {
-	OWFLog("===== OpenWF Enabler config =====");
 	OWFLog("  serverHost = {}", g_Config.serverHost);
 	OWFLog("  disableNRS = {}", g_Config.disableNRS);
 	OWFLog("");

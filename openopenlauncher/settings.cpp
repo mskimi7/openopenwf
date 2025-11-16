@@ -6,7 +6,7 @@
 
 void SaveLaunchSettings(const std::wstring& warframeExePath, const std::wstring& langCode, bool isDx11)
 {
-	std::wstring settingFileContents = std::format(L"{}!{}!{}", warframeExePath, langCode, isDx11 ? 1 : 0);
+	std::wstring settingFileContents = std::format(L"{}*{}*{}", warframeExePath, langCode, isDx11 ? 1 : 0);
 	HANDLE hFile = CreateFileW(SETTINGS_FILE_NAME, GENERIC_WRITE, FILE_SHARE_READ, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
 	if (hFile != INVALID_HANDLE_VALUE)
 	{
@@ -25,7 +25,7 @@ static std::vector<std::wstring> SplitConfigLine(const std::wstring& settingsLin
 
 	for (;;)
 	{
-		size_t currEndIdx = settingsLine.find('!', lastStartIdx);
+		size_t currEndIdx = settingsLine.find('*', lastStartIdx);
 		if (currEndIdx == std::string::npos)
 		{
 			result.push_back(settingsLine.substr(lastStartIdx));

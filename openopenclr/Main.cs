@@ -14,25 +14,33 @@ namespace openopenclr
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
-            Interlocked.Exchange(ref InspectorForm, new Inspector());
             for (; ;)
             {
                 if (Interlocked.CompareExchange(ref InspectorShowRequested, 0, 1) == 1)
+                {
+                    InspectorForm = new Inspector();
                     Application.Run(InspectorForm);
+                    NativeInterface.SuppressTreeNodeEvents(false);
+                    Interlocked.Exchange(ref InspectorShowRequested, 0);
+                }
                 else
-                    Thread.Sleep(15);
+                {
+                    Thread.Sleep(50);
+                }
             }
         }
 
         static void HandleEvent(NativeEvent evt)
         {
+            Inspector form = InspectorForm; // store due to thread-safety
+
             switch (evt.Id)
             {
                 case NativeEventId.ResponseTypeList:
-                    InspectorForm.OnTypeListReceived((ResponseTypeListEvent)evt);
+                    form?.OnTypeListReceived((ResponseTypeListEvent)evt);
                     break;
                 case NativeEventId.ResponseTypeInfo:
-                    InspectorForm.OnTypeInfoReceived((ResponseTypeInfoEvent)evt);
+                    form?.OnTypeInfoReceived((ResponseTypeInfoEvent)evt);
                     break;
                 case NativeEventId.ResponseShowInspector:
                     Interlocked.Exchange(ref InspectorShowRequested, 1);
@@ -40,7 +48,7 @@ namespace openopenclr
             }
         }
 
-        static void ManagedThread()
+        static void EventThread()
         {
             for (; ;)
             {
@@ -56,12 +64,9 @@ namespace openopenclr
         {
             NativeInterface.Initialize(nativePointers);
 
-            // It's important to wait for all the managed DLLs to load before Warframe's entry point executes for... reasons...
             new Thread(FormThread).Start();
-            while (InspectorForm == null || !InspectorForm.IsFormReady.WaitOne())
-                Thread.Sleep(15); // wait until form is ready
+            new Thread(EventThread).Start();
 
-            new Thread(ManagedThread).Start();
             return 0;
         }
     }

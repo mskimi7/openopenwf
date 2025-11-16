@@ -116,8 +116,6 @@ void InitCLR()
 	hResult = clrRuntimeHost->ExecuteInDefaultAppDomain(dllPath, L"openopenclr.Program", L"Main", BuildInitArgument().c_str(), &unused);
 	if (!SUCCEEDED(hResult))
 		FATAL_EXIT(std::format("Cannot load manager library openopenclr.dll: code {}", hResult));
-
-	OWFLog("CLR successfully initialized"); // horror!
 }
 
 void CLRInterop::PushNativeEvent(NativeEventId eventId, const std::string& jsonPayload)
@@ -153,10 +151,14 @@ void CLRInterop::SendTypeList(const std::unordered_set<std::string>& allTypeList
 
 void CLRInterop::SendTypeInfo(const TypeInfoUI& typeInfo)
 {
+	std::unordered_map<std::string, std::string> encodedPropertyTexts;
+	for (auto&& tt : typeInfo.propertyTexts)
+		encodedPropertyTexts[std::to_string(tt.first)] = Base64Encode(tt.second);
+
 	json j = {
 		{ "error", typeInfo.errorMessage },
 		{ "parentTypes", typeInfo.parentTypes },
-		{ "propertyText", typeInfo.propertyText },
+		{ "propertyTexts", encodedPropertyTexts }
 	};
 
 	PushNativeEvent(NativeEventId::ResponseTypeInfo, j.dump());

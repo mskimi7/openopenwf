@@ -43,6 +43,7 @@ inline OpenWFConfig g_Config;
 inline const char* g_BuildLabelStringPtr;
 
 std::vector<unsigned char*> SignatureScan(const char* pattern, const char* mask, unsigned char* data, size_t length);
+std::string Base64Encode(const std::string& inputData);
 std::string AESDecrypt(const std::string& inputData, const std::string& key, const std::string& iv);
 
 void LoadConfig();
@@ -51,7 +52,9 @@ void PlaceHooks();
 std::string OWFGetBuildLabel();
 
 void OpenWFLog(const std::string& message);
+void OpenWFLogColor(const std::string& message, unsigned short color);
 #define OWFLog(fmt, ...) OpenWFLog(std::format(fmt, __VA_ARGS__))
+#define OWFLogColor(color, fmt, ...) OpenWFLogColor(std::format(fmt, __VA_ARGS__), color)
 
 __declspec(noreturn) void OpenWFFatalExit(const std::string& reason, const std::string& func, const std::string& file, int line);
 #define FATAL_EXIT(s) OpenWFFatalExit(s, __FUNCTION__, __FILE__, __LINE__)

@@ -35,7 +35,8 @@ namespace openopenclr
                     using (var br = new BinaryReader(ms))
                     {
                         NativeEventId eventId = (NativeEventId)br.ReadByte();
-                        JObject eventData = JObject.Parse(Encoding.UTF8.GetString(br.ReadBytes((int)(ms.Length - ms.Position))));
+                        string jsonText = Encoding.UTF8.GetString(br.ReadBytes((int)(ms.Length - ms.Position)));
+                        JObject eventData = JObject.Parse(jsonText);
 
                         switch (eventId)
                         {

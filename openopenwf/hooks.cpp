@@ -207,6 +207,16 @@ static void* NEW_GameUpdate(void* a1)
 {
 	if (AssetDownloader::Instance && ResourceMgr::Instance)
 	{
+		static bool isInspectorLaunched = false;
+		if ((GetAsyncKeyState(VK_CONTROL) & 0x8000) && (GetAsyncKeyState(0x50) & 0x8000))
+			isInspectorLaunched = false;
+
+		if (!isInspectorLaunched)
+		{
+			isInspectorLaunched = true;
+			CLRInterop::PushNativeEvent(NativeEventId::ResponseShowInspector, "{}");
+		}
+
 		auto event = CLRInterop::GetManagedEvent();
 		if (!event)
 			return OLD_GameUpdate(a1);
@@ -260,7 +270,7 @@ static void* NEW_GameUpdate(void* a1)
 						tt = tt->parent;
 					} while (tt);
 
-					typeInfo.propertyText = rinfo.propertyText;
+					typeInfo.propertyTexts = rinfo.propertyTexts;
 				}
 
 				CLRInterop::SendTypeInfo(typeInfo);

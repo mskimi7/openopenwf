@@ -19,6 +19,12 @@ static unsigned char entryPointOriginalBytes[sizeof(entryPointOverwriteBytes)];
 
 static void HookedEntryPoint()
 {
+	OWFLogColor(15, "================================================================================\n");
+	OWFLogColor(15, "=====                          OpenWF Enabler (v2)                         =====\n");
+	OWFLogColor(15, "=====                                                                      =====\n");
+	OWFLogColor(15, "====="); OWFLogColor(10, "          >>> Press CTRL+P to (re)open OpenWF Inspector <<<           "); OWFLogColor(15, "=====\n");
+	OWFLogColor(15, "================================================================================\n\n");
+
 	LoadConfig();
 	g_Config.PrintToConsole();
 
@@ -64,8 +70,6 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 		{
 			wchar_t* fileName = PathFindFileNameW(processName);
 			g_wfExeDirectory = std::wstring(processName, fileName - processName);
-
-			OWFLog("Image directory: {}", WideToUTF8(g_wfExeDirectory));
 
 			if (_wcsicmp(fileName, L"warframe.x64.exe") != 0)
 			{

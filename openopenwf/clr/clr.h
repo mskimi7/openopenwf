@@ -10,6 +10,8 @@
 
 using json = nlohmann::json;
 
+// "Request" means "from CLR to native code"
+// "Response" means "from native code to CLR"
 enum class NativeEventId : unsigned char
 {
     RequestTypeList = 0,
@@ -17,11 +19,12 @@ enum class NativeEventId : unsigned char
     RequestTypeInfo = 2,
     ResponseTypeInfo = 3,
     RequestSuppressMsgNotify = 4,
+    ResponseShowInspector = 5
 };
 
 struct TypeInfoUI {
     std::vector<std::string> parentTypes;
-    std::string propertyText;
+    std::unordered_map<unsigned int, std::string> propertyTexts;
     std::string errorMessage;
 };
 
@@ -56,6 +59,10 @@ struct RequestSuppressMsgNotifyEvent : NativeEvent {
 
     virtual NativeEventId GetId() override { return NativeEventId::RequestSuppressMsgNotify; }
     static std::unique_ptr<RequestSuppressMsgNotifyEvent> Deserialize(const json& j);
+};
+
+struct ResponseShowInspectorEvent : NativeEvent {
+    virtual NativeEventId GetId() override { return NativeEventId::ResponseShowInspector; }
 };
 
 namespace CLRInterop {

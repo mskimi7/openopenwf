@@ -56,6 +56,10 @@ namespace openopenclr
         private readonly List<LinkLabel> extraInheritanceControls = new List<LinkLabel>();
         private int totalTypes = 0;
 
+        private PropertyText currentPropertyText;
+        private Dictionary<uint, byte[]> availablePropertyTexts = new Dictionary<uint, byte[]>();
+        private uint requestedPropertyFlags = 0x20800003; // relative, own text, with indentation
+
         public Inspector()
         {
             InitializeComponent();
@@ -81,6 +85,39 @@ namespace openopenclr
             button1.Enabled = !isRefreshing;
             button1.Text = isRefreshing ? "Refreshing..." : "Refresh list";
             label1.Text = isRefreshing ? "Refreshing, please wait..." : $"{totalTypes} types found";
+        }
+
+        internal void SetPropertyText(uint flags)
+        {
+            if (availablePropertyTexts == null || !availablePropertyTexts.TryGetValue(flags, out byte[] propText))
+            {
+                currentPropertyText = null;
+                textBox1.ForeColor = Color.DarkRed;
+                textBox1.Text = "No property text is currently available.";
+            }
+            else
+            {
+                try
+                {
+                    currentPropertyText = new PropertyText(propText);
+                }
+                catch (Exception ex)
+                {
+                    currentPropertyText = null;
+                    textBox1.ForeColor = Color.DarkRed;
+                    textBox1.Text = $"Property text is invalid:\r\n{ex}";
+                    return;
+                }
+
+                textBox1.ForeColor = Color.Black;
+                textBox1.Text = radioButton1.Checked ? currentPropertyText.TextData : currentPropertyText.JsonData;
+            }
+        }
+
+        internal void SetAvailablePropertyTexts(Dictionary<uint, byte[]> availableTexts)
+        {
+            availablePropertyTexts = availableTexts;
+            SetPropertyText(requestedPropertyFlags);
         }
 
         internal void SetInheritanceInfo(List<string> inheritanceChain)
@@ -142,7 +179,7 @@ namespace openopenclr
             allTypes.Sort();
             foreach (var type in allTypes)
             {
-                if (!type.StartsWith("/"))
+                if (type.Length == 0 || type[0] != '/')
                 {
                     NativeInterface.LogToConsole($"Ignored abnormal type: {type}");
                     continue;
@@ -231,6 +268,7 @@ namespace openopenclr
             BeginInvoke((Action)(() =>
             {
                 label2.ResetText();
+                SetAvailablePropertyTexts(null);
                 SetInheritanceInfo(null);
 
                 if (evt.IsError)
@@ -240,6 +278,7 @@ namespace openopenclr
                 else
                 {
                     label2.Text = $"Type info for {evt.InheritanceChain[0]}";
+                    SetAvailablePropertyTexts(evt.PropertyTexts);
                     SetInheritanceInfo(evt.InheritanceChain);
                 }
             }));
@@ -259,10 +298,45 @@ namespace openopenclr
 
         private void linkLabel1_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
-            MessageBox.Show("Checking this option will hide most irrelevant types that do not use property text. " +
+            MessageBox.Show(this, "Checking this option will hide most irrelevant types that do not use property text. " +
                 "It is recommended to ALWAYS keep it checked unless you're certain that the type you're looking for is behind this option.\n\n" +
                 "Toggling this option requires a refresh.",
                 "OpenWF Enabler", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        private void Inspector_Shown(object sender, EventArgs e)
+        {
+            BeginInvoke((Action)(() =>
+            {
+                button1.PerformClick(); // simulate type list refresh
+            }));
+        }
+
+        private void Inspector_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            NativeInterface.SuppressTreeNodeEvents(true); // improves performance of treeview clearing upon form close
+        }
+
+        private void linkLabel3_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+        {
+            using (var settings = new PropertySettings(requestedPropertyFlags))
+            {
+                if (settings.ShowDialog(this) == DialogResult.OK)
+                {
+                    requestedPropertyFlags = settings.PropertyTextFlags;
+                    SetPropertyText(requestedPropertyFlags);
+                }
+            }
+        }
+
+        private void radioButton1_CheckedChanged(object sender, EventArgs e)
+        {
+            SetPropertyText(requestedPropertyFlags);
+        }
+
+        private void radioButton2_CheckedChanged(object sender, EventArgs e)
+        {
+            SetPropertyText(requestedPropertyFlags);
         }
     }
 }

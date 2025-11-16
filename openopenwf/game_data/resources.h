@@ -1,6 +1,7 @@
 #pragma once
 
 #include "common.h"
+#include <unordered_map>
 
 // Frankly I have no idea what's going on here, it looks like some reference counted pointer
 struct ObjectSmartPtr {
@@ -18,7 +19,7 @@ typedef void(*AcquireResourceByString_t)(ResourceMgr* resMgr, Resource* outType,
 
 struct ResourceInfo {
 	ObjectType* type = nullptr;
-	std::string propertyText;
+	std::unordered_map<unsigned int, std::string> propertyTexts;
 };
 
 struct ResourceMgrVTable {

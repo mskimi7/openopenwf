@@ -1,13 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
+using Newtonsoft.Json;
 
 namespace openopenclr
 {
     internal static class PropertyTextParser // Adapted from a different project, this format is an abomination
     {
-        private struct ArrayStream
+        private class ArrayStream
         {
             internal byte[] Array;
             internal int Position;
@@ -67,66 +69,66 @@ namespace openopenclr
 
         static void PreprocessPropertyData(byte[] data)
         {
-            Stack<int> bracketStartIndices = new Stack<int>();
-            Stack<byte> bracketEndChars = new Stack<byte>();
+            Stack<int> bracketStartIndexes = new Stack<int>();
+            Stack<byte> bracketEndTypes = new Stack<byte>();
 
-            bool inString = false;
+            bool isInString = false;
 
             for (int i = 0; i < data.Length; ++i)
             {
                 if (data[i] == '"')
-                    inString = !inString;
+                    isInString = !isInString;
 
-                if (!inString)
+                if (!isInString)
                 {
                     if (data[i] == '{')
                     {
                         data[i] = 5; // by default assume we're dealing with an array
 
-                        bracketStartIndices.Push(i);
-                        bracketEndChars.Push(6);
+                        bracketStartIndexes.Push(i);
+                        bracketEndTypes.Push(6);
                     }
 
-                    if (bracketStartIndices.Count > 0)
+                    if (bracketStartIndexes.Count > 0)
                     {
                         if (data[i] == ',')
                         {
-                            int idx = bracketStartIndices.Peek();
+                            int idx = bracketStartIndexes.Peek();
                             if (data[idx] != 5)
                             {
                                 data[idx] = 5; // '[' but replaced with 5 to avoid conflicts
-                                bracketEndChars.Pop();
-                                bracketEndChars.Push(6);
+                                bracketEndTypes.Pop();
+                                bracketEndTypes.Push(6);
                             }
                         }
                         else if (data[i] == '=')
                         {
-                            int idx = bracketStartIndices.Peek();
+                            int idx = bracketStartIndexes.Peek();
                             if (data[idx] != 7)
                             {
                                 data[idx] = 7;
-                                bracketEndChars.Pop();
-                                bracketEndChars.Push(8);
+                                bracketEndTypes.Pop();
+                                bracketEndTypes.Push(8);
                             }
                         }
                     }
 
                     if (data[i] == '}')
                     {
-                        data[i] = bracketEndChars.Pop();
-                        bracketStartIndices.Pop();
+                        data[i] = bracketEndTypes.Pop();
+                        bracketStartIndexes.Pop();
                     }
                 }
             }
 
-            if (inString)
-                throw new InvalidDataException("Mismatched number of double-quote characters");
+            if (isInString)
+                throw new InvalidDataException();
 
-            if (bracketStartIndices.Count > 0)
-                throw new InvalidDataException("Mismatched number of brackets");
+            if (bracketStartIndexes.Count > 0)
+                throw new InvalidDataException();
 
-            if (bracketEndChars.Count > 0)
-                throw new InvalidDataException("Mismatched number of brackets");
+            if (bracketEndTypes.Count > 0)
+                throw new InvalidDataException();
         }
 
         static List<object> ReadArray(ArrayStream s)
@@ -179,7 +181,7 @@ namespace openopenclr
 
                 string key = ReadIdentifier(s);
                 if (PeekStream(s) != '=')
-                    throw new InvalidDataException($"Expected '=' after '{key}'");
+                    throw new InvalidDataException($"Expected '=' after '{key}' but found '{PeekStream(s)}'");
 
                 SkipCharacterAndWhitespace(s);
                 nextChar = PeekStream(s);
@@ -211,9 +213,16 @@ namespace openopenclr
     {
         internal Dictionary<string, object> PropertyData { get; }
 
+        internal string TextData { get; }
+        internal string JsonData { get; }
+
         internal PropertyText(byte[] propertyText)
         {
-            PropertyData = PropertyTextParser.ParseEntry(propertyText);
+            TextData = Encoding.UTF8.GetString(propertyText); // technically, JSON is also text...
+            TextData = TextData.Replace("\r\n", "\n").Replace("\n", "\r\n").Replace("\t", "  "); // make sure we're using the Windows line endings (for textbox to be happy)
+
+            PropertyData = PropertyTextParser.ParseEntry(propertyText.ToArray()); // clone array
+            JsonData = JsonConvert.SerializeObject(PropertyData, Formatting.Indented);
         }
     }
 }
