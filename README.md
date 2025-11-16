@@ -13,6 +13,7 @@
 OpenWF Enabler uses the [same configuration file and format](https://openwf.io/bootstrapper-manual) as the standard bootstrapper, i.e. `OpenWF/Client Config.json`. However, the only configurable settings at this point are:
 - `server_host`, which allows you to specify the OpenWF's server hostname
 - `disable_nrs_connection`, which prevents Warframe from testing P2P connectivity and raising a firewall warning
+- `http_port` and `https_port`, which specifies a custom OpenWF's server port for HTTP and HTTPS traffic, respectively.
 
 All other settings are (for the time being) ignored.
 
@@ -23,3 +24,4 @@ All other settings are (for the time being) ignored.
 
 ## Screenshots
 <img width="544" height="202" alt="untitled" src="https://github.com/user-attachments/assets/c40de05c-00ae-472b-9a0e-f0d954385007" />
+<img width="999" height="597" alt="inspector" src="https://github.com/user-attachments/assets/0d66ecdb-e154-4f20-8489-759ec0f3da3c" />
