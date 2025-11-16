@@ -81,6 +81,9 @@ static std::wstring BuildInitArgument()
 
 void InitCLR()
 {
+	if (g_Config.disableCLR)
+		return;
+
 	wchar_t dllPath[MAX_PATH];
 	if (!GetModuleFileNameW(g_hInstDll, dllPath, std::size(dllPath)))
 		FATAL_EXIT(std::format("Could not obtain name of the openopenwf DLL: code {}", GetLastError()));
@@ -120,6 +123,9 @@ void InitCLR()
 
 void CLRInterop::PushNativeEvent(NativeEventId eventId, const std::string& jsonPayload)
 {
+	if (g_Config.disableCLR)
+		return;
+
 	auto lock = eventsLock.Acquire();
 
 	std::unique_ptr<unsigned char[]> newBuffer = std::make_unique_for_overwrite<unsigned char[]>(jsonPayload.size() + 1);
@@ -131,6 +137,9 @@ void CLRInterop::PushNativeEvent(NativeEventId eventId, const std::string& jsonP
 
 std::unique_ptr<NativeEvent> CLRInterop::GetManagedEvent()
 {
+	if (g_Config.disableCLR)
+		return nullptr;
+
 	auto lock = eventsLock.Acquire();
 	if (pendingManagedEvents.empty())
 		return nullptr;

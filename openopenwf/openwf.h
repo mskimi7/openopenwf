@@ -36,6 +36,7 @@ struct OpenWFConfig {
 	bool disableNRS = true;
 	int httpPort = 80;
 	int httpsPort = 443;
+	bool disableCLR = false;
 
 	void PrintToConsole();
 };

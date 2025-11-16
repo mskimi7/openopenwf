@@ -12,6 +12,7 @@ void OpenWFConfig::PrintToConsole()
 	OWFLog("  disableNRS = {}", g_Config.disableNRS);
 	OWFLog("  httpPort = {}", g_Config.httpPort);
 	OWFLog("  httpsPort = {}", g_Config.httpsPort);
+	//OWFLog("  disableCLR = {}", g_Config.disableCLR);
 	OWFLog("");
 }
 
@@ -22,6 +23,7 @@ static void ParseConfig(const json& j)
 	newConfig.disableNRS = j.value<bool>("disable_nrs_connection", g_Config.disableNRS);
 	newConfig.httpPort = j.value<int>("http_port", g_Config.httpPort);
 	newConfig.httpsPort = j.value<int>("https_port", g_Config.httpsPort);
+	newConfig.disableCLR = j.value<bool>("disable_clr", g_Config.disableCLR);
 
 	g_Config = newConfig;
 }
