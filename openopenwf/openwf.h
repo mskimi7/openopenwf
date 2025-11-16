@@ -15,7 +15,7 @@
 #include "game_data/type_mgr.h"
 #include "clr/clr.h"
 
-#define REDIRECTOR_NAME "openopenwf_2"
+#define REDIRECTOR_NAME "openopenwf_3"
 
 using namespace std::string_literals;
 
