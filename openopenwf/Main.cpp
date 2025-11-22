@@ -20,7 +20,7 @@ static unsigned char entryPointOriginalBytes[sizeof(entryPointOverwriteBytes)];
 static void HookedEntryPoint()
 {
 	OWFLogColor(15, "================================================================================\n");
-	OWFLogColor(15, "=====                          OpenWF Enabler (v3)                         =====\n");
+	OWFLogColor(15, "=====                          OpenWF Enabler (v4)                         =====\n");
 	OWFLogColor(15, "=====                                                                      =====\n");
 	OWFLogColor(15, "====="); OWFLogColor(10, "          >>> Press CTRL+P to (re)open OpenWF Inspector <<<           "); OWFLogColor(15, "=====\n");
 	OWFLogColor(15, "================================================================================\n\n");
