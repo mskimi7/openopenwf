@@ -12,6 +12,8 @@
 #include <format>
 #include <optional>
 
+inline std::wstring g_configFilePath;
+
 struct LaunchSettings {
 	std::wstring warframeExePath;
 	std::wstring langCode; // e.g. "en" or "zh"

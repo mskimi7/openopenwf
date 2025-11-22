@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 using System.Windows.Forms;
 using openopenclr.NativeEvents;
 
@@ -34,17 +35,24 @@ namespace openopenclr
         {
             Inspector form = InspectorForm; // store due to thread-safety
 
-            switch (evt.Id)
+            try
             {
-                case NativeEventId.ResponseTypeList:
-                    form?.OnTypeListReceived((ResponseTypeListEvent)evt);
-                    break;
-                case NativeEventId.ResponseTypeInfo:
-                    form?.OnTypeInfoReceived((ResponseTypeInfoEvent)evt);
-                    break;
-                case NativeEventId.ResponseShowInspector:
-                    Interlocked.Exchange(ref InspectorShowRequested, 1);
-                    break;
+                switch (evt.Id)
+                {
+                    case NativeEventId.ResponseTypeList:
+                        form?.OnTypeListReceived((ResponseTypeListEvent)evt);
+                        break;
+                    case NativeEventId.ResponseTypeInfo:
+                        form?.OnTypeInfoReceived((ResponseTypeInfoEvent)evt);
+                        break;
+                    case NativeEventId.ResponseShowInspector:
+                        Interlocked.Exchange(ref InspectorShowRequested, 1);
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                NativeInterface.LogToConsole($"Failed to process a native->CLR event: {ex}");
             }
         }
 

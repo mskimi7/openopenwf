@@ -2,12 +2,10 @@
 
 #include <vector>
 
-#define SETTINGS_FILE_NAME L"oowf_launch.cfg"
-
 void SaveLaunchSettings(const std::wstring& warframeExePath, const std::wstring& langCode, bool isDx11)
 {
 	std::wstring settingFileContents = std::format(L"{}*{}*{}", warframeExePath, langCode, isDx11 ? 1 : 0);
-	HANDLE hFile = CreateFileW(SETTINGS_FILE_NAME, GENERIC_WRITE, FILE_SHARE_READ, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+	HANDLE hFile = CreateFileW(g_configFilePath.c_str(), GENERIC_WRITE, FILE_SHARE_READ, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
 	if (hFile != INVALID_HANDLE_VALUE)
 	{
 		std::string settingFileContentsNarrow = WideToUTF8(settingFileContents);
@@ -39,7 +37,7 @@ static std::vector<std::wstring> SplitConfigLine(const std::wstring& settingsLin
 
 std::optional<LaunchSettings> LoadLaunchSettings()
 {
-	HANDLE hFile = CreateFileW(SETTINGS_FILE_NAME, GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, 0, nullptr);
+	HANDLE hFile = CreateFileW(g_configFilePath.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, 0, nullptr);
 	if (hFile != INVALID_HANDLE_VALUE)
 	{
 		DWORD fileSize = GetFileSize(hFile, nullptr), readBytes;
