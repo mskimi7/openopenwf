@@ -199,6 +199,9 @@ static void NEW_SendGetRequestUnified(decltype(OLD_SendGetRequest_1) origFunc, W
 	if (newURL.find("worldState.php") != std::string::npos)
 		newURL += std::format("?buildLabel={}/{}", OWFGetBuildLabel(), AssetDownloader::Instance->GetCacheManifestHash()->GetText());
 
+	if (newURL.find("inventory.php") != std::string::npos || newURL.find("missionInventoryUpdate.php") != std::string::npos)
+		newURL += "&xpBasedLevelCapDisabled=1";
+
 	WarframeString alteredURL;
 	alteredURL.Create(newURL);
 	return origFunc(&alteredURL, a2, a3);
@@ -319,6 +322,16 @@ static void* NEW_ResourceMgr_Ctor(ResourceMgr* resourceMgr)
 	return OLD_ResourceMgr_Ctor(resourceMgr);
 }
 
+static void SetProtectedMemory(void* target, const void* source, size_t memSize)
+{
+	DWORD flOldProtect = 0;
+	if (!VirtualProtect(target, memSize, PAGE_EXECUTE_READWRITE, &flOldProtect))
+		FATAL_EXIT(std::format("Cannot change memory protection, error {}", GetLastError()));
+
+	memcpy(target, source, memSize);
+	VirtualProtect(target, memSize, flOldProtect, &flOldProtect);
+}
+
 template <bool MultipleResultsAllowed = false>
 static unsigned char* SignatureScanMustSucceed(const char* pattern, const char* mask, unsigned char* data, size_t length, const char* description)
 {
@@ -374,6 +387,10 @@ void PlaceHooks()
 	unsigned char* worldStateVerifySig = SignatureScanMustSucceed("\x48\x89\x45\xF0\x48\x8B\x00\x84\xD2\x0F\x84\x00\x00\x00\x00\x48\x8D\x15", "xxxxxx?xxxx??xxxxx", imageBase, 40000000, "WorldStateVerify");
 	worldStateVerifySig = (unsigned char*)(((ULONG_PTR)worldStateVerifySig - 0x20) & 0xFFFFFFFFFFFFFFF0);
 	MH_CreateHook(worldStateVerifySig, NEW_WorldStateVerify, (LPVOID*)&OLD_WorldStateVerify);
+
+	// level cap test
+	unsigned char* levelCapTest = SignatureScanMustSucceed("\x44\x33\xC5\x41\x3B\xC0\x73", "xxxxxxx", imageBase, 40000000, "LevelCapTest");
+	SetProtectedMemory(levelCapTest + 6, "\xEB", 1);
 
 	// each protected request has a separate per-request random AES-192 key, which is RSA-encrypted - hook the RSA function to overwrite the random key with a known key & IV
 	unsigned char* rsaEncryptSig = SignatureScanMustSucceed("\x4D\x8B\x51\x08\x49\xFF\x62\x08", "xxxxxxxx", imageBase, 40000000, "rsa_ossl_public_encrypt");
