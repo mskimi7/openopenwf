@@ -152,12 +152,23 @@ static int NEW_rsa_ossl_public_encrypt(int flen, unsigned char* from, unsigned c
 	return OLD_rsa_ossl_public_encrypt(flen, from, to, rsa, padding);
 }
 
+static std::string ModifyURLForOpenWF(const std::string& url)
+{
+	std::string newURL = ReplaceURLHost(url);
+
+	if (newURL.find("login.php") != std::string::npos)
+		newURL += std::format("&buildLabel={}/{}&clientMod={}", OWFGetBuildLabel(), AssetDownloader::Instance->GetCacheManifestHash()->GetText(), REDIRECTOR_NAME);
+	else if (newURL.find("worldState.php") != std::string::npos)
+		newURL += std::format("?buildLabel={}/{}", OWFGetBuildLabel(), AssetDownloader::Instance->GetCacheManifestHash()->GetText());
+	else if (newURL.find("inventory.php") != std::string::npos || newURL.find("missionInventoryUpdate.php") != std::string::npos)
+		newURL += "&xpBasedLevelCapDisabled=1";
+
+	return newURL;
+}
+
 static void NEW_SendPostRequestUnified(decltype(OLD_SendPostRequest_1) origFunc, void* a1, WarframeString* url, WarframeString* bodyData, char requestType, void* a5, void* a6)
 {
 	WarframeString decryptedData;
-	std::string newURL = ReplaceURLHost(url->GetText());
-
-	OWFLog("[POST] {}", url->GetText());
 
 	if (requestType == REQUEST_TYPE_GZIP_PROTECTED)
 	{
@@ -173,8 +184,8 @@ static void NEW_SendPostRequestUnified(decltype(OLD_SendPostRequest_1) origFunc,
 		}
 	}
 
-	if (newURL.find("login.php") != std::string::npos)
-		newURL += std::format("&buildLabel={}/{}&clientMod={}", OWFGetBuildLabel(), AssetDownloader::Instance->GetCacheManifestHash()->GetText(), REDIRECTOR_NAME);
+	std::string newURL = ModifyURLForOpenWF(url->GetText());
+	OWFLog("[POST] {}", newURL);
 
 	WarframeString alteredURL;
 	alteredURL.Create(newURL);
@@ -193,14 +204,8 @@ static void NEW_SendPostRequest_2(void* a1, WarframeString* url, WarframeString*
 
 static void NEW_SendGetRequestUnified(decltype(OLD_SendGetRequest_1) origFunc, WarframeString* url, void* a2, void* a3)
 {
-	std::string newURL = ReplaceURLHost(url->GetText());
-	OWFLog("[GET] {}", url->GetText());
-
-	if (newURL.find("worldState.php") != std::string::npos)
-		newURL += std::format("?buildLabel={}/{}", OWFGetBuildLabel(), AssetDownloader::Instance->GetCacheManifestHash()->GetText());
-
-	if (newURL.find("inventory.php") != std::string::npos || newURL.find("missionInventoryUpdate.php") != std::string::npos)
-		newURL += "&xpBasedLevelCapDisabled=1";
+	std::string newURL = ModifyURLForOpenWF(url->GetText());
+	OWFLog("[GET] {}", newURL);
 
 	WarframeString alteredURL;
 	alteredURL.Create(newURL);
