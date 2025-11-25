@@ -17,6 +17,15 @@ void OpenWFLog(const std::string& message)
 	WriteConsoleA(GetStdHandle(STD_OUTPUT_HANDLE), "\n", 1u, &charsWritten, nullptr);
 }
 
+void OpenWFLogWide(const std::wstring& message)
+{
+	auto lock = loggerLock.Acquire();
+
+	DWORD charsWritten;
+	WriteConsoleW(GetStdHandle(STD_OUTPUT_HANDLE), message.data(), (DWORD)message.size(), &charsWritten, nullptr);
+	WriteConsoleW(GetStdHandle(STD_OUTPUT_HANDLE), L"\n", 1u, &charsWritten, nullptr);
+}
+
 void OpenWFLogColor(const std::string& message, unsigned short color)
 {
 	auto lock = loggerLock.Acquire();

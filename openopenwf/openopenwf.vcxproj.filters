@@ -54,6 +54,9 @@
     <ClCompile Include="clr\clr.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="proppatch.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="openwf.h">

@@ -90,6 +90,7 @@
     <ClCompile Include="minhook\hde\hde64.c" />
     <ClCompile Include="minhook\hook.c" />
     <ClCompile Include="minhook\trampoline.c" />
+    <ClCompile Include="proppatch.cpp" />
     <ClCompile Include="signature_scan.cpp" />
     <ClCompile Include="utils.cpp" />
   </ItemGroup>

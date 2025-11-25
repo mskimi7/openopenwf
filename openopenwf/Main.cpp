@@ -29,6 +29,7 @@ static void HookedEntryPoint()
 	g_Config.PrintToConsole();
 
 	InitCLR();
+	LoadPropertyTextPatches();
 	PlaceHooks();
 
 	// restore original entry point and continue execution from there

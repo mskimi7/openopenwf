@@ -51,12 +51,15 @@ std::string AESDecrypt(const std::string& inputData, const std::string& key, con
 
 void LoadConfig();
 void InitCLR();
+void LoadPropertyTextPatches();
 void PlaceHooks();
 std::string OWFGetBuildLabel();
 
 void OpenWFLog(const std::string& message);
+void OpenWFLogWide(const std::wstring& message);
 void OpenWFLogColor(const std::string& message, unsigned short color);
 #define OWFLog(fmt, ...) OpenWFLog(std::format(fmt, __VA_ARGS__))
+#define OWFLogWide(fmt, ...) OpenWFLogWide(std::format(fmt, __VA_ARGS__))
 #define OWFLogColor(color, fmt, ...) OpenWFLogColor(std::format(fmt, __VA_ARGS__), color)
 
 __declspec(noreturn) void OpenWFFatalExit(const std::string& reason, const std::string& func, const std::string& file, int line);
