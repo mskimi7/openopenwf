@@ -57,6 +57,9 @@ bool LaunchWarframe(HWND mainWindow, const std::wstring& wfExePath, const std::w
 	if (!TestForBootstrapperFile(mainWindow, wfDir + L"dwmapi.dll"))
 		return false;
 
+	if (!TestForBootstrapperFile(mainWindow, wfDir + L"version.dll"))
+		return false;
+
 	std::wstring commandLine = wfExePath;
 
 	// wrap in quotation marks in case path contains spaces
