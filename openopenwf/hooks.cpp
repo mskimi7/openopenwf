@@ -183,12 +183,15 @@ static std::string ModifyURLForOpenWF(const std::string& url)
 {
 	std::string newURL = ReplaceURLHost(url);
 
+	// if there already exists some query parameter, use &; otherwise use ? for the first one
+	char queryFirstChar = newURL.find('?') == std::string::npos ? '?' : '&';
+
 	if (newURL.find("login.php") != std::string::npos)
-		newURL += std::format("&buildLabel={}/{}&clientMod={}", OWFGetBuildLabel(), AssetDownloader::Instance->GetCacheManifestHash()->GetText(), REDIRECTOR_NAME);
+		newURL += std::format("{}buildLabel={}/{}&clientMod={}", queryFirstChar, OWFGetBuildLabel(), AssetDownloader::Instance->GetCacheManifestHash()->GetText(), REDIRECTOR_NAME);
 	else if (newURL.find("worldState.php") != std::string::npos)
-		newURL += std::format("?buildLabel={}/{}", OWFGetBuildLabel(), AssetDownloader::Instance->GetCacheManifestHash()->GetText());
+		newURL += std::format("{}buildLabel={}/{}", queryFirstChar, OWFGetBuildLabel(), AssetDownloader::Instance->GetCacheManifestHash()->GetText());
 	else if (newURL.find("inventory.php") != std::string::npos || newURL.find("missionInventoryUpdate.php") != std::string::npos)
-		newURL += "&xpBasedLevelCapDisabled=1";
+		newURL += std::format("{}xpBasedLevelCapDisabled=1", queryFirstChar);
 
 	return newURL;
 }
