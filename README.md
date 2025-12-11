@@ -1,7 +1,7 @@
 # OpenWF Enabler
 **OpenWF Enabler** is an open-source alternative to the established bootstrapper used by the [OpenWF](https://openwf.io/) project. The purpose of OpenWF Enabler is to redirect Warframe's requests to an OpenWF server.
 
-**This project is intended to be used with Warframe versions 40.0 and above.**
+**This project is intended to be used with Warframe versions 41.0 and above.**
 
 ## Usage
 1. Follow the [Server Installation steps on the OpenWF website](https://openwf.io/guide) and configure the OpenWF server to your liking.
