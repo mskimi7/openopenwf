@@ -4,6 +4,7 @@
 #include <winhttp.h>
 #include <Shlwapi.h>
 #include <intrin.h>
+#include <winternl.h>
 
 static decltype(&WinHttpConnect) OLD_WinHttpConnect;
 static decltype(&connect) OLD_connect;
@@ -11,6 +12,7 @@ static decltype(&getaddrinfo) OLD_getaddrinfo;
 static decltype(&GetAddrInfoExW) OLD_GetAddrInfoExW;
 static decltype(&SendMessageW) OLD_SendMessageW;
 static decltype(&NotifyWinEvent) OLD_NotifyWinEvent;
+static decltype(&WriteFile) OLD_WriteFile;
 static void* (*OLD_GameUpdate)(void*);
 static int (*OLD_DownloadManifest)(AssetDownloader*, void*, void*, void*, void*, void*);
 static int (*OLD_X509_verify_cert)(void*);
@@ -123,6 +125,31 @@ VOID WINAPI NEW_NotifyWinEvent(DWORD event, HWND hwnd, LONG idObject, LONG idChi
 		return;
 
 	return OLD_NotifyWinEvent(event, hwnd, idObject, idChild);
+}
+
+BOOL WINAPI NEW_WriteFile(HANDLE hFile, LPCVOID lpBuffer, DWORD nNumberOfBytesToWrite, LPDWORD lpNumberOfBytesWritten, LPOVERLAPPED lpOverlapped)
+{
+	if (hFile == GetStdHandle(STD_OUTPUT_HANDLE))
+	{
+		ULONG_PTR returnAddr = (ULONG_PTR)_ReturnAddress();
+		if (returnAddr >= g_WarframePEAddr && returnAddr < g_WarframePEAddr + g_WarframePESize)
+		{
+			// pretend we've written stuff to console
+			__try
+			{
+				*lpNumberOfBytesWritten = nNumberOfBytesToWrite;
+			}
+			__except (EXCEPTION_EXECUTE_HANDLER)
+			{
+				// ignore exception
+			}
+
+			SetLastError(0);
+			return TRUE;
+		}
+	}
+
+	return OLD_WriteFile(hFile, lpBuffer, nNumberOfBytesToWrite, lpNumberOfBytesWritten, lpOverlapped);
 }
 
 static int NEW_X509_verify_cert(void* ctx)
@@ -349,7 +376,13 @@ static unsigned char* SignatureScanMustSucceed(const char* pattern, const char* 
 
 void PlaceHooks()
 {
-	unsigned char* imageBase = (unsigned char*)GetModuleHandleA(nullptr);
+	MODULEINFO wfModInfo;
+	GetModuleInformation(GetCurrentProcess(), GetModuleHandleA(nullptr), &wfModInfo, sizeof(wfModInfo));
+
+	g_WarframePEAddr = (ULONG_PTR)wfModInfo.lpBaseOfDll;
+	g_WarframePESize = wfModInfo.SizeOfImage;
+
+	unsigned char* imageBase = (unsigned char*)g_WarframePEAddr;
 
 	if (!LoadLibraryA("user32.dll"))
 		FATAL_EXIT("Failed to load user32.dll");
@@ -370,39 +403,42 @@ void PlaceHooks()
 	MH_CreateHookApi(L"user32.dll", "SendMessageW", NEW_SendMessageW, (LPVOID*)&OLD_SendMessageW);
 	MH_CreateHookApi(L"user32.dll", "NotifyWinEvent", NEW_NotifyWinEvent, (LPVOID*)&OLD_NotifyWinEvent);
 	
+	// prevent Warframe from writing its log data into console
+	MH_CreateHookApi(L"kernel32.dll", "WriteFile", NEW_WriteFile, (LPVOID*)&OLD_WriteFile);
+
 	// A function that gets called repeatedly on the main thread, so that we can achieve thread-safety when accessing game data.
-	unsigned char* gameUpdateSig = SignatureScanMustSucceed("\x48\x33\xC4\x48\x89\x45\xF0\x80\x3D\x00\x00\x00\x00\x00\x48\x8B\xF1", "xxxxxxxxx????xxxx", imageBase, 40000000, "GameUpdate");
+	unsigned char* gameUpdateSig = SignatureScanMustSucceed("\x48\x33\xC4\x48\x89\x45\xF0\x80\x3D\x00\x00\x00\x00\x00\x48\x8B\xF1", "xxxxxxxxx????xxxx", imageBase, g_WarframePESize, "GameUpdate");
 	gameUpdateSig = (unsigned char*)(((ULONG_PTR)gameUpdateSig - 0x18) & 0xFFFFFFFFFFFFFFF0);
 	MH_CreateHook(gameUpdateSig, NEW_GameUpdate, (LPVOID*)&OLD_GameUpdate);
 
 	// H.Cache.bin download function (we pretend it always succeeds so the game uses the file that's already inside cache)
-	unsigned char* downloadManifestSig = SignatureScanMustSucceed("\x4C\x8B\xDC\x53\x57\x41\x56\x48\x81\xEC\x90\x01\x00\x00", "xxxxxxxxxxxxxx", imageBase, 40000000, "DownloadManifest");
+	unsigned char* downloadManifestSig = SignatureScanMustSucceed("\x4C\x8B\xDC\x53\x57\x41\x56\x48\x81\xEC\x90\x01\x00\x00", "xxxxxxxxxxxxxx", imageBase, g_WarframePESize, "DownloadManifest");
 	MH_CreateHook(downloadManifestSig, NEW_DownloadManifest, (LPVOID*)&OLD_DownloadManifest);
 
 	// SSL certificate validation
-	unsigned char* verifyCertSig = SignatureScanMustSucceed("\x48\x89\x5C\x24\x08\x57\x48\x83\xEC\x30\x48\x8B\xB9", "xxxxxxxxxxxxx", imageBase, 40000000, "X509_verify_cert");
+	unsigned char* verifyCertSig = SignatureScanMustSucceed("\x48\x89\x5C\x24\x08\x57\x48\x83\xEC\x30\x48\x8B\xB9", "xxxxxxxxxxxxx", imageBase, g_WarframePESize, "X509_verify_cert");
 	MH_CreateHook(verifyCertSig, NEW_X509_verify_cert, (LPVOID*)&OLD_X509_verify_cert);
 
 	// even more SSL certificate validation
-	unsigned char* verifyHostSig = SignatureScanMustSucceed("\x49\x8B\x18\x4C\x8B\xF9\x45\x33\xE4", "xxxxxxxxx", imageBase, 40000000, "Curl_ossl_verifyhost");
+	unsigned char* verifyHostSig = SignatureScanMustSucceed("\x49\x8B\x18\x4C\x8B\xF9\x45\x33\xE4", "xxxxxxxxx", imageBase, g_WarframePESize, "Curl_ossl_verifyhost");
 	verifyHostSig = (unsigned char*)(((ULONG_PTR)verifyHostSig - 0x14) & 0xFFFFFFFFFFFFFFF0);
 	MH_CreateHook(verifyHostSig, NEW_Curl_ossl_verifyhost, (LPVOID*)&OLD_Curl_ossl_verifyhost);
 
 	// WorldState signature verification
-	unsigned char* worldStateVerifySig = SignatureScanMustSucceed("\x48\x89\x45\xF0\x48\x8B\x00\x84\xD2\x0F\x84\x00\x00\x00\x00\x48\x8D\x15", "xxxxxx?xxxx??xxxxx", imageBase, 40000000, "WorldStateVerify");
+	unsigned char* worldStateVerifySig = SignatureScanMustSucceed("\x48\x89\x45\xF0\x48\x8B\x00\x84\xD2\x0F\x84\x00\x00\x00\x00\x48\x8D\x15", "xxxxxx?xxxx??xxxxx", imageBase, g_WarframePESize, "WorldStateVerify");
 	worldStateVerifySig = (unsigned char*)(((ULONG_PTR)worldStateVerifySig - 0x20) & 0xFFFFFFFFFFFFFFF0);
 	MH_CreateHook(worldStateVerifySig, NEW_WorldStateVerify, (LPVOID*)&OLD_WorldStateVerify);
 
 	// level cap test
-	unsigned char* levelCapTest = SignatureScanMustSucceed("\x44\x33\xC5\x41\x3B\xC0\x73", "xxxxxxx", imageBase, 40000000, "LevelCapTest");
+	unsigned char* levelCapTest = SignatureScanMustSucceed("\x44\x33\xC5\x41\x3B\xC0\x73", "xxxxxxx", imageBase, g_WarframePESize, "LevelCapTest");
 	SetProtectedMemory(levelCapTest + 6, "\xEB", 1);
 
 	// each protected request has a separate per-request random AES-192 key, which is RSA-encrypted - hook the RSA function to overwrite the random key with a known key & IV
-	unsigned char* rsaEncryptSig = SignatureScanMustSucceed("\x49\x8B\x41\x08\x4C\x8B\x50\x08", "xxxxxxxx", imageBase, 40000000, "rsa_ossl_public_encrypt");
+	unsigned char* rsaEncryptSig = SignatureScanMustSucceed("\x49\x8B\x41\x08\x4C\x8B\x50\x08", "xxxxxxxx", imageBase, g_WarframePESize, "rsa_ossl_public_encrypt");
 	MH_CreateHook(rsaEncryptSig, NEW_rsa_ossl_public_encrypt, (LPVOID*)&OLD_rsa_ossl_public_encrypt);
 
 	// hook SendPostRequest to decrypt the request before sending it to OpenWF (there are two SendPostRequest functions, we hook both)
-	std::vector<unsigned char*> sendPostRequest = SignatureScan("\x48\x89\x5C\x24\x20\x55\x56\x57\x41\x54\x41\x55\x41\x56\x41\x57\x48\x81\xEC\x30\x01\x00\x00", "xxxxxxxxxxxxxxxxxxxxxxx", imageBase, 40000000);
+	std::vector<unsigned char*> sendPostRequest = SignatureScan("\x48\x89\x5C\x24\x20\x55\x56\x57\x41\x54\x41\x55\x41\x56\x41\x57\x48\x81\xEC\x30\x01\x00\x00", "xxxxxxxxxxxxxxxxxxxxxxx", imageBase, g_WarframePESize);
 	if (sendPostRequest.size() != 2)
 		FATAL_EXIT("Signature scan failed: a manual update is required.\nWhat failed: SendPostRequest");
 
@@ -410,7 +446,7 @@ void PlaceHooks()
 	MH_CreateHook(sendPostRequest[1], NEW_SendPostRequest_2, (LPVOID*)&OLD_SendPostRequest_2);
 
 	// hook SendGetRequest too
-	std::vector<unsigned char*> sendGetRequest = SignatureScan("\x41\xF6\xC0\x04\x74\x02\xCD\x2C", "xxxxxxxx", imageBase, 40000000);
+	std::vector<unsigned char*> sendGetRequest = SignatureScan("\x41\xF6\xC0\x04\x74\x02\xCD\x2C", "xxxxxxxx", imageBase, g_WarframePESize);
 	if (sendGetRequest.size() != 2)
 		FATAL_EXIT("Signature scan failed: a manual update is required.\nWhat failed: SendGetRequest");
 
@@ -418,49 +454,49 @@ void PlaceHooks()
 	MH_CreateHook((char*)(((ULONG_PTR)sendGetRequest[1] - 0x23) & 0xFFFFFFFFFFFFFFF0), NEW_SendGetRequest_2, (LPVOID*)&OLD_SendGetRequest_2);
 
 	// constructor for ResourceMgr
-	unsigned char* resourceMgrCtor = SignatureScanMustSucceed("\x80\x61\x58\x80\x48\x8D\x05", "xxxxxxx", imageBase, 40000000, "ResourceMgr::ctor");
+	unsigned char* resourceMgrCtor = SignatureScanMustSucceed("\x80\x61\x58\x80\x48\x8D\x05", "xxxxxxx", imageBase, g_WarframePESize, "ResourceMgr::ctor");
 	resourceMgrCtor = (unsigned char*)(((ULONG_PTR)resourceMgrCtor - 5) & 0xFFFFFFFFFFFFFFF0);
 	MH_CreateHook(resourceMgrCtor, NEW_ResourceMgr_Ctor, (LPVOID*)&OLD_ResourceMgr_Ctor);
 
-	unsigned char* buildLabelSig = SignatureScanMustSucceed("\x80\x3D\x00\x00\x00\x00\x00\x0F\x85\x00\x00\x00\x00\xE8\x00\x00\x00\x00\x48\x8B\xD8\x48\x85\xC0", "xx????xxx??xxx????xxxxxx", imageBase, 40000000, "BuildLabelString");
+	unsigned char* buildLabelSig = SignatureScanMustSucceed("\x80\x3D\x00\x00\x00\x00\x00\x0F\x85\x00\x00\x00\x00\xE8\x00\x00\x00\x00\x48\x8B\xD8\x48\x85\xC0", "xx????xxx??xxx????xxxxxx", imageBase, g_WarframePESize, "BuildLabelString");
 	buildLabelSig += 2;
 	buildLabelSig += *(int*)buildLabelSig;
 	buildLabelSig += 5;
 	g_BuildLabelStringPtr = (const char*)buildLabelSig;
 
 	unsigned char* initStringFromBytesSig = SignatureScanMustSucceed<true>("\x48\x8D\x15\x00\x00\x00\x00\x48\x8D\x0D\x00\x00\x00\x00\xE8\x00\x00\x00\x00\x48\x8D\x15\x00\x00\x00\x00\x48\x8D\x0D\x00\x00\x00\x00\xE8\x00\x00\x00\x00\x48\x8D\x15\x00\x00\x00\x00\x48\x8D\x0D\x00\x00\x00\x00\xE8\x00\x00\x00\x00\x48\x8D\x15\x00\x00\x00\x00\x48\x8D\x0D\x00\x00\x00\x00\xE8\x00\x00\x00\x00\x48\x8D\x15\x00\x00\x00\x00\x48\x8D\x0D\x00\x00\x00\x00\xE8\x00\x00\x00\x00\x48\x8D\x15\x00\x00\x00\x00\x48\x8D\x0D\x00\x00\x00\x00\xE8\x00\x00\x00\x00\x48\x8D\x15\x00\x00\x00\x00\x48\x8D\x0D\x00\x00\x00\x00\xE8\x00\x00\x00\x00\x48\x8D\x15\x00\x00\x00\x00\x48\x8D\x0D\x00\x00\x00\x00\xE8\x00\x00\x00\x00",
-		"xxx????xxx????x????xxx????xxx????x????xxx????xxx????x????xxx????xxx????x????xxx????xxx????x????xxx????xxx????x????xxx????xxx????x????xxx????xxx????x????", imageBase, 40000000, "InitStringFromBytes");
+		"xxx????xxx????x????xxx????xxx????x????xxx????xxx????x????xxx????xxx????x????xxx????xxx????x????xxx????xxx????x????xxx????xxx????x????xxx????xxx????x????", imageBase, g_WarframePESize, "InitStringFromBytes");
 	initStringFromBytesSig += 15;
 	initStringFromBytesSig += *(int*)initStringFromBytesSig;
 	initStringFromBytesSig += 4;
 	InitStringFromBytes = (decltype(InitStringFromBytes))initStringFromBytesSig;
 
-	unsigned char* wfFreeSig = SignatureScanMustSucceed<true>("\x48\x8B\x4C\x24\x00\x48\x85\xC9\x74\x05\xE8", "xxxx?xxxxxx", imageBase, 40000000, "WFFree");
+	unsigned char* wfFreeSig = SignatureScanMustSucceed<true>("\x48\x8B\x4C\x24\x00\x48\x85\xC9\x74\x05\xE8", "xxxx?xxxxxx", imageBase, g_WarframePESize, "WFFree");
 	wfFreeSig += 11;
 	wfFreeSig += *(int*)wfFreeSig;
 	wfFreeSig += 4;
 	WFFree = (decltype(WFFree))wfFreeSig;
 
 	// NRS analysis (analysis always fails in OpenWF since an NRS server is not available.. yet)
-	unsigned char* nrsAnalyzeSig = SignatureScanMustSucceed("\x48\x33\xC4\x48\x89\x85\x00\x00\x00\x00\x83\xB9\x00\x00\x00\x00\x01\x4C\x8B\xE9\x75", "xxxxxx??xxxx??xxxxxxx", imageBase, 40000000, "NRSAnalyze");
+	unsigned char* nrsAnalyzeSig = SignatureScanMustSucceed("\x48\x33\xC4\x48\x89\x85\x00\x00\x00\x00\x83\xB9\x00\x00\x00\x00\x01\x4C\x8B\xE9\x75", "xxxxxx??xxxx??xxxxxxx", imageBase, g_WarframePESize, "NRSAnalyze");
 	nrsAnalyzeSig = (unsigned char*)(((ULONG_PTR)nrsAnalyzeSig - 0x15) & 0xFFFFFFFFFFFFFFF0);
 	MH_CreateHook(nrsAnalyzeSig, NEW_NRSAnalyze, (LPVOID*)&OLD_NRSAnalyze);
 
 	// name mappings for object types (these are stored in contiguous memory blocks and referenced using a pseudo-index)
-	unsigned char* typeNameMappingSig = SignatureScanMustSucceed<true>("\x48\x8B\xF9\x48\x8B\x05", "xxxxxx", imageBase, 40000000, "TypeNameMapping");
+	unsigned char* typeNameMappingSig = SignatureScanMustSucceed<true>("\x48\x8B\xF9\x48\x8B\x05", "xxxxxx", imageBase, g_WarframePESize, "TypeNameMapping");
 	typeNameMappingSig += 6;
 	typeNameMappingSig += *(int*)typeNameMappingSig;
 	typeNameMappingSig += 4;
 	g_ObjTypeNameMapping = (ObjectTypeNameMapping*)typeNameMappingSig;
 
 	// pointer to /EE/Types/Base/Object
-	unsigned char* baseObjectPtr = SignatureScanMustSucceed("\x48\x89\x45\xD7\x00\xFF\xD1\x4C\x8D\x05", "xxxx?xxxxx", imageBase, 40000000, "BaseObjectPtr");
+	unsigned char* baseObjectPtr = SignatureScanMustSucceed("\x48\x89\x45\xD7\x00\xFF\xD1\x4C\x8D\x05", "xxxx?xxxxx", imageBase, g_WarframePESize, "BaseObjectPtr");
 	baseObjectPtr += 10;
 	baseObjectPtr += *(int*)baseObjectPtr;
 	baseObjectPtr += 4;
 	g_BaseType = (ObjectType*)baseObjectPtr;
 
-	unsigned char* typeMgrPtr = SignatureScanMustSucceed("\xE8\x00\x00\x00\x00\x41\xB9\x03\x00\x00\x21\x4C\x8D\x45\x00\x49\x00\x00\x48\x00\x00\xE8", "x????xxxxxxxxx?x??x??x", imageBase, 40000000, "TypeMgr");
+	unsigned char* typeMgrPtr = SignatureScanMustSucceed("\xE8\x00\x00\x00\x00\x41\xB9\x03\x00\x00\x21\x4C\x8D\x45\x00\x49\x00\x00\x48\x00\x00\xE8", "x????xxxxxxxxx?x??x??x", imageBase, g_WarframePESize, "TypeMgr");
 	unsigned char* getPropertyTextPtr = typeMgrPtr;
 	typeMgrPtr += 1;
 	typeMgrPtr += *(int*)typeMgrPtr;

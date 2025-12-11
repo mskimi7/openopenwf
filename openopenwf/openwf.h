@@ -5,10 +5,9 @@
 #include <Windows.h>
 #include <Psapi.h>
 
-#include <string>
-#include <format>
 #include <vector>
 
+#include "logger.h"
 #include "game_data/common.h"
 #include "game_data/asset_downloader.h"
 #include "game_data/resources.h"
@@ -41,6 +40,9 @@ struct OpenWFConfig {
 	void PrintToConsole();
 };
 
+inline ULONG_PTR g_WarframePEAddr;
+inline DWORD g_WarframePESize;
+
 inline OpenWFConfig g_Config;
 
 inline const char* g_BuildLabelStringPtr;
@@ -54,13 +56,6 @@ void InitCLR();
 void LoadPropertyTextPatches();
 void PlaceHooks();
 std::string OWFGetBuildLabel();
-
-void OpenWFLog(const std::string& message);
-void OpenWFLogWide(const std::wstring& message);
-void OpenWFLogColor(const std::string& message, unsigned short color);
-#define OWFLog(fmt, ...) OpenWFLog(std::format(fmt, __VA_ARGS__))
-#define OWFLogWide(fmt, ...) OpenWFLogWide(std::format(fmt, __VA_ARGS__))
-#define OWFLogColor(color, fmt, ...) OpenWFLogColor(std::format(fmt, __VA_ARGS__), color)
 
 __declspec(noreturn) void OpenWFFatalExit(const std::string& reason, const std::string& func, const std::string& file, int line);
 #define FATAL_EXIT(s) OpenWFFatalExit(s, __FUNCTION__, __FILE__, __LINE__)

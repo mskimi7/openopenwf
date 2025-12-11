@@ -85,6 +85,7 @@
     <ClCompile Include="game_data\resources.cpp" />
     <ClCompile Include="game_data\type_mgr.cpp" />
     <ClCompile Include="hooks.cpp" />
+    <ClCompile Include="logger.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="minhook\buffer.c" />
     <ClCompile Include="minhook\hde\hde64.c" />
@@ -104,6 +105,7 @@
     <ClInclude Include="game_data\type_mgr.h" />
     <ClInclude Include="json.hpp" />
     <ClInclude Include="json_fwd.hpp" />
+    <ClInclude Include="logger.h" />
     <ClInclude Include="minhook\buffer.h" />
     <ClInclude Include="minhook\hde\hde64.h" />
     <ClInclude Include="minhook\hde\pstdint.h" />
