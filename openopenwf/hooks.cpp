@@ -384,7 +384,7 @@ void PlaceHooks()
 	MH_CreateHook(verifyCertSig, NEW_X509_verify_cert, (LPVOID*)&OLD_X509_verify_cert);
 
 	// even more SSL certificate validation
-	unsigned char* verifyHostSig = SignatureScanMustSucceed("\x49\x8B\x10\x45\x33\xED\x40\x32\xFF", "xxxxxxxxx", imageBase, 40000000, "Curl_ossl_verifyhost");
+	unsigned char* verifyHostSig = SignatureScanMustSucceed("\x49\x8B\x18\x4C\x8B\xF9\x45\x33\xE4", "xxxxxxxxx", imageBase, 40000000, "Curl_ossl_verifyhost");
 	verifyHostSig = (unsigned char*)(((ULONG_PTR)verifyHostSig - 0x14) & 0xFFFFFFFFFFFFFFF0);
 	MH_CreateHook(verifyHostSig, NEW_Curl_ossl_verifyhost, (LPVOID*)&OLD_Curl_ossl_verifyhost);
 
@@ -398,7 +398,7 @@ void PlaceHooks()
 	SetProtectedMemory(levelCapTest + 6, "\xEB", 1);
 
 	// each protected request has a separate per-request random AES-192 key, which is RSA-encrypted - hook the RSA function to overwrite the random key with a known key & IV
-	unsigned char* rsaEncryptSig = SignatureScanMustSucceed("\x4D\x8B\x51\x08\x49\xFF\x62\x08", "xxxxxxxx", imageBase, 40000000, "rsa_ossl_public_encrypt");
+	unsigned char* rsaEncryptSig = SignatureScanMustSucceed("\x49\x8B\x41\x08\x4C\x8B\x50\x08", "xxxxxxxx", imageBase, 40000000, "rsa_ossl_public_encrypt");
 	MH_CreateHook(rsaEncryptSig, NEW_rsa_ossl_public_encrypt, (LPVOID*)&OLD_rsa_ossl_public_encrypt);
 
 	// hook SendPostRequest to decrypt the request before sending it to OpenWF (there are two SendPostRequest functions, we hook both)
