@@ -44,7 +44,8 @@ static bool IsValidWarframePath(const std::wstring& warframeExecutablePath)
 	return tocFilesFound >= 10;
 }
 
-std::wstring GuessWarframeSettings(std::optional<std::wstring>& language, std::optional<bool>& isDx11, const std::wstring& savedWarframePath)
+std::wstring GuessWarframeSettings(std::optional<std::wstring>& language, std::optional<std::wstring>& voLanguage, std::optional<bool>& isDx11,
+	const std::wstring& savedWarframePath)
 {
 	wchar_t regValue[512];
 	DWORD regValueSize = sizeof(regValue);
@@ -62,6 +63,10 @@ std::wstring GuessWarframeSettings(std::optional<std::wstring>& language, std::o
 			regValueSize = sizeof(regValue);
 			if (RegGetValueW(HKEY_CURRENT_USER, L"Software\\Digital Extremes\\Warframe\\Launcher", L"Language", RRF_RT_REG_SZ, nullptr, regValue, &regValueSize) == ERROR_SUCCESS)
 				language = regValue;
+
+			regValueSize = sizeof(regValue);
+			if (RegGetValueW(HKEY_CURRENT_USER, L"Software\\Digital Extremes\\Warframe\\Launcher", L"LanguageVO", RRF_RT_REG_SZ, nullptr, regValue, &regValueSize) == ERROR_SUCCESS)
+				voLanguage = regValue;
 
 			DWORD graphicsSetting = 0;
 			regValueSize = sizeof(graphicsSetting);

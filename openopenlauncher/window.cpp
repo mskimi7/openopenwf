@@ -23,12 +23,19 @@ constexpr LanguageInfo availableLanguages[] = {
 	{ L"zh", L"Simplified Chinese (zh)", },
 };
 
+constexpr LanguageInfo availableVOLanguages[] = {
+	{ L"-", L"Default", },
+	{ L"en", L"English (en)", },
+	{ L"zh", L"Chinese (zh)", },
+};
+
 static HWND mainWindow;
 static HWND wfTextbox;
 static HWND wfBrowse;
 static HWND dllTextbox;
 static HWND dllBrowse;
 static HWND langCombobox;
+static HWND voCombobox;
 static HWND dxCombobox;
 static HWND startButton;
 
@@ -82,11 +89,18 @@ static void StartWarframe()
 	}
 
 	LRESULT selectedLangIdx = SendMessageW(langCombobox, CB_GETCURSEL, 0, 0);
+	LRESULT selectedVOLangIdx = SendMessageW(voCombobox, CB_GETCURSEL, 0, 0);
 	LRESULT selectedDxIdx = SendMessageW(dxCombobox, CB_GETCURSEL, 0, 0);
 
 	if (selectedLangIdx == CB_ERR)
 	{
 		MessageBoxW(nullptr, L"Please select a language.", L"OpenWF Enabler", MB_OK | MB_ICONERROR);
+		return;
+	}
+
+	if (selectedVOLangIdx == CB_ERR)
+	{
+		MessageBoxW(nullptr, L"Please select a voiceover language.", L"OpenWF Enabler", MB_OK | MB_ICONERROR);
 		return;
 	}
 
@@ -98,12 +112,14 @@ static void StartWarframe()
 
 	commandLineArgs = std::format(L" -cluster:public -allowmultiple -language:{} -graphicsDriver:{}", availableLanguages[selectedLangIdx].code,
 		selectedDxIdx == 0 ? L"dx11" : L"dx12");
+	if (selectedVOLangIdx > 0)
+		commandLineArgs += std::format(L" -languageVO:{}", availableVOLanguages[selectedVOLangIdx].code);
 
 	EnableWindow(startButton, false);
 
 	if (LaunchWarframe(mainWindow, warframePath, dllPath, commandLineArgs))
 	{
-		SaveLaunchSettings(warframePath, availableLanguages[selectedLangIdx].code, selectedDxIdx == 0);
+		SaveLaunchSettings(warframePath, availableLanguages[selectedLangIdx].code, availableVOLanguages[selectedVOLangIdx].code, selectedDxIdx == 0);
 		ExitProcess(0);
 	}
 
@@ -156,31 +172,48 @@ static void FillDefaults()
 		}
 	}
 
-	std::optional<std::wstring> languageSetting;
+	std::optional<std::wstring> languageSetting, voSetting;
 	std::optional<bool> isDx11Setting;
 
 	std::optional<LaunchSettings> storedSettings = LoadLaunchSettings();
-	std::wstring wfPath = GuessWarframeSettings(languageSetting, isDx11Setting, storedSettings.has_value() ? storedSettings->warframeExePath : L"");
+	std::wstring wfPath = GuessWarframeSettings(languageSetting, voSetting, isDx11Setting, storedSettings.has_value() ? storedSettings->warframeExePath : L"");
 
 	if (!wfPath.empty())
 	{
 		SetWindowTextW(wfTextbox, wfPath.c_str());
 
 		std::wstring targetLang = storedSettings.has_value() ? storedSettings->langCode : (languageSetting.has_value() ? languageSetting.value() : L"");
+		std::wstring targetVOLang = storedSettings.has_value() ? storedSettings->voLangCode : (voSetting.has_value() ? voSetting.value() : L"");
 		bool targetIsDx11 = storedSettings.has_value() ? storedSettings->isDx11 : (!isDx11Setting.has_value() || isDx11Setting.value() == true);
+
+		bool languageSet = false, voLanguageSet = false;
 
 		for (size_t i = 0; i < std::size(availableLanguages); ++i)
 		{
 			if (wcscmp(availableLanguages[i].code, targetLang.c_str()) == 0)
 			{
 				SendMessageW(langCombobox, CB_SETCURSEL, i, 0);
-				goto setGraphics;
+				languageSet = true;
+				break;
 			}
 		}
 
-		SendMessageW(langCombobox, CB_SETCURSEL, 1, 0); // en
+		for (size_t i = 0; i < std::size(availableVOLanguages); ++i)
+		{
+			if (wcscmp(availableVOLanguages[i].code, targetVOLang.c_str()) == 0)
+			{
+				SendMessageW(voCombobox, CB_SETCURSEL, i, 0);
+				voLanguageSet = true;
+				break;
+			}
+		}
 
-	setGraphics:
+		if (!languageSet)
+			SendMessageW(langCombobox, CB_SETCURSEL, 1, 0); // en
+
+		if (!voLanguageSet)
+			SendMessageW(voCombobox, CB_SETCURSEL, 0, 0); // default
+
 		SendMessageW(dxCombobox, CB_SETCURSEL, targetIsDx11 ? 0 : 1, 0);
 	}
 }
@@ -201,7 +234,7 @@ void CreateLaunchDialog()
 	RegisterClassExW(&wc);
 
 	mainWindow = CreateWindowExW(WS_EX_APPWINDOW | WS_EX_WINDOWEDGE | WS_EX_CONTROLPARENT, wc.lpszClassName, L"OpenWF Enabler",
-		WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN | WS_CLIPSIBLINGS, CW_USEDEFAULT, CW_USEDEFAULT, 558, 209, nullptr, nullptr, wc.hInstance, nullptr);
+		WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN | WS_CLIPSIBLINGS, CW_USEDEFAULT, CW_USEDEFAULT, 558, 238, nullptr, nullptr, wc.hInstance, nullptr);
 
 	HWND hWarframePathLabel = CreateWindowExW(0, L"STATIC", L"Warframe.x64.exe path:", WS_CHILD | WS_VISIBLE | WS_GROUP | WS_CLIPSIBLINGS, 12, 16, 131, 15, mainWindow, nullptr, nullptr, nullptr);
 	wfTextbox = CreateWindowExW(WS_EX_CLIENTEDGE, L"EDIT", nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_TABSTOP | ES_AUTOHSCROLL, 149, 13, 281, 23, mainWindow, nullptr, nullptr, nullptr);
@@ -214,10 +247,13 @@ void CreateLaunchDialog()
 	HWND hLanguageLabel = CreateWindowExW(0, L"STATIC", L"Game language:", WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_GROUP, 50, 74, 93, 15, mainWindow, nullptr, nullptr, nullptr);
 	langCombobox = CreateWindowExW(0, WC_COMBOBOX, nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_TABSTOP | CBS_DROPDOWNLIST | CBS_AUTOHSCROLL | CBS_HASSTRINGS, 149, 71, 166, 400, mainWindow, nullptr, nullptr, nullptr);
 
-	HWND hDXLabel = CreateWindowExW(0, L"STATIC", L"DirectX version:", WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_GROUP, 54, 103, 89, 15, mainWindow, nullptr, nullptr, nullptr);
-	dxCombobox = CreateWindowExW(0, WC_COMBOBOX, nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_TABSTOP | CBS_DROPDOWNLIST | CBS_AUTOHSCROLL | CBS_HASSTRINGS, 149, 100, 166, 400, mainWindow, nullptr, nullptr, nullptr);
+	HWND hVOLabel = CreateWindowExW(0, L"STATIC", L"Voiceover language:", WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_GROUP, 31, 103, 113, 15, mainWindow, nullptr, nullptr, nullptr);
+	voCombobox = CreateWindowExW(0, WC_COMBOBOX, nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_TABSTOP | CBS_DROPDOWNLIST | CBS_AUTOHSCROLL | CBS_HASSTRINGS, 149, 100, 166, 400, mainWindow, nullptr, nullptr, nullptr);
 
-	startButton = CreateWindowExW(0, L"BUTTON", L"Start Warframe (OpenWF)", WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_GROUP | WS_TABSTOP, 12, 129, 518, 29, mainWindow, nullptr, nullptr, nullptr);
+	HWND hDXLabel = CreateWindowExW(0, L"STATIC", L"DirectX version:", WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_GROUP, 54, 132, 89, 15, mainWindow, nullptr, nullptr, nullptr);
+	dxCombobox = CreateWindowExW(0, WC_COMBOBOX, nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_TABSTOP | CBS_DROPDOWNLIST | CBS_AUTOHSCROLL | CBS_HASSTRINGS, 149, 129, 166, 400, mainWindow, nullptr, nullptr, nullptr);
+
+	startButton = CreateWindowExW(0, L"BUTTON", L"Start Warframe (OpenWF)", WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_GROUP | WS_TABSTOP, 12, 158, 518, 29, mainWindow, nullptr, nullptr, nullptr);
 
 	HFONT hDefFont = CreateFontW(-12, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, DEFAULT_PITCH, L"Segoe UI");
 
@@ -232,6 +268,9 @@ void CreateLaunchDialog()
 	SendMessageW(hLanguageLabel, WM_SETFONT, (WPARAM)hDefFont, FALSE);
 	SendMessageW(langCombobox, WM_SETFONT, (WPARAM)hDefFont, FALSE);
 
+	SendMessageW(hVOLabel, WM_SETFONT, (WPARAM)hDefFont, FALSE);
+	SendMessageW(voCombobox, WM_SETFONT, (WPARAM)hDefFont, FALSE);
+
 	SendMessageW(hDXLabel, WM_SETFONT, (WPARAM)hDefFont, FALSE);
 	SendMessageW(dxCombobox, WM_SETFONT, (WPARAM)hDefFont, FALSE);
 
@@ -241,6 +280,12 @@ void CreateLaunchDialog()
 	{
 		SendMessageW(langCombobox, CB_ADDSTRING, 0, (LPARAM)availableLanguages[i].description);
 		SendMessageW(langCombobox, CB_SETITEMDATA, i, (LPARAM)availableLanguages[i].code);
+	}
+
+	for (size_t i = 0; i < std::size(availableVOLanguages); ++i)
+	{
+		SendMessageW(voCombobox, CB_ADDSTRING, 0, (LPARAM)availableVOLanguages[i].description);
+		SendMessageW(voCombobox, CB_SETITEMDATA, i, (LPARAM)availableVOLanguages[i].code);
 	}
 
 	SendMessageW(dxCombobox, CB_ADDSTRING, 0, (LPARAM)L"DirectX 11");

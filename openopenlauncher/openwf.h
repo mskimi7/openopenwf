@@ -17,14 +17,15 @@ inline std::wstring g_configFilePath;
 struct LaunchSettings {
 	std::wstring warframeExePath;
 	std::wstring langCode; // e.g. "en" or "zh"
+	std::wstring voLangCode; // "-", "en" or "zh"
 	bool isDx11 = true;
 };
 
-void SaveLaunchSettings(const std::wstring& warframeExePath, const std::wstring& langCode, bool isDx11);
+void SaveLaunchSettings(const std::wstring& warframeExePath, const std::wstring& langCode, const std::wstring& voLangCode, bool isDx11);
 std::optional<LaunchSettings> LoadLaunchSettings();
 
 void CreateLaunchDialog();
-std::wstring GuessWarframeSettings(std::optional<std::wstring>& language, std::optional<bool>& isDx11, const std::wstring& savedWarframePath);
+std::wstring GuessWarframeSettings(std::optional<std::wstring>& language, std::optional<std::wstring>& voLanguage, std::optional<bool>& isDx11, const std::wstring& savedWarframePath);
 bool LaunchWarframe(HWND mainWindow, const std::wstring& wfExePath, const std::wstring& dllPath, const std::wstring& commandLineArgs);
 
 inline BOOL FileExists(LPCWSTR szPath)
