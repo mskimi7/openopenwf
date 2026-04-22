@@ -56,7 +56,7 @@ struct TypeMgrEntry {
 };
 
 struct TypeMgr {
-	WarframeVector<TypeMgrDirTypeList>* GetAllTypePaths() { return MEMBER_OFFSET(WarframeVector<TypeMgrDirTypeList>*, 0xE0); }
+	WarframeVector<TypeMgrDirTypeList>* GetAllTypePaths() { return MEMBER_OFFSET(WarframeVector<TypeMgrDirTypeList>*, 0xC0); }
 
 	std::unique_ptr<std::vector<CompressedTypeName>> GetRegisteredTypes();
 

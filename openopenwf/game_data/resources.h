@@ -23,13 +23,12 @@ struct ResourceInfo {
 };
 
 struct ResourceMgrVTable {
-	void* func0; // add resource reference?
-	void* func1; // remove resource reference?
 	void* AcquireResourceById;
 	void* AcquireResourceByUnk1;
 	void* AcquireResourceByUnk2;
 	AcquireResourceByString_t AcquireResourceByString;
 	void* AcquireResourceByUnk4;
+	void* DecrementReference;
 	void* func7;
 	void* func8;
 	void* func9;

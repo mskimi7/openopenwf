@@ -11,10 +11,10 @@ struct TreeEntry {
 
 struct TreeEntryVector {
 	TreeEntry* ptr;
-	TreeEntry* usedSize;
-	TreeEntry* allocSize;
+	unsigned int usedSize;
+	unsigned int allocSize;
 
-	size_t size() const { return (size_t)(usedSize - ptr); }
+	size_t size() const { return (size_t)(usedSize / sizeof(TreeEntry)); }
 };
 
 struct TreeBlock {

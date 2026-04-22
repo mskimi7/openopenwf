@@ -3,8 +3,8 @@
 template <typename T>
 struct WarframeVector {
 	T* ptr;
-	T* endPtr;
-	T* allocPtr;
+	int usedSize;
+	int allocSize;
 
-	size_t size() const { return (size_t)(endPtr - ptr); }
+	size_t size() const { return (size_t)(usedSize / sizeof(T)); }
 };

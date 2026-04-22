@@ -14,7 +14,7 @@
 #include "game_data/type_mgr.h"
 #include "clr/clr.h"
 
-#define REDIRECTOR_NAME "openopenwf_5"
+#define REDIRECTOR_NAME "openopenwf_6"
 
 using namespace std::string_literals;
 
@@ -55,7 +55,7 @@ void LoadConfig();
 void InitCLR();
 void LoadPropertyTextPatches();
 void PlaceHooks();
-std::string OWFGetBuildLabel();
+std::string OWFGetRealBuildLabel();
 
 __declspec(noreturn) void OpenWFFatalExit(const std::string& reason, const std::string& func, const std::string& file, int line);
 #define FATAL_EXIT(s) OpenWFFatalExit(s, __FUNCTION__, __FILE__, __LINE__)

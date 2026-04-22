@@ -14,7 +14,7 @@ __declspec(noreturn) void OpenWFFatalExit(const std::string& reason, const std::
 	ExitProcess(1);
 }
 
-std::string OWFGetBuildLabel()
+std::string OWFGetRealBuildLabel()
 {
 	std::string fullBuildLabel = g_BuildLabelStringPtr;
 	size_t spaceIndex = fullBuildLabel.find(' ');

@@ -32,8 +32,7 @@ static void* (*OLD_ResourceMgr_Ctor)(ResourceMgr*);
 
 void WarframeString::Create(const std::string& data)
 {
-	InitStringFromBytes(this, std::string(data.size(), ' ').c_str());
-	memcpy(this->GetPtr(), data.data(), data.size());
+	InitStringFromBytes(this, data.c_str());
 }
 
 void WarframeString::Free()
@@ -187,9 +186,9 @@ static std::string ModifyURLForOpenWF(const std::string& url)
 	char queryFirstChar = newURL.find('?') == std::string::npos ? '?' : '&';
 
 	if (newURL.find("login.php") != std::string::npos)
-		newURL += std::format("{}buildLabel={}/{}&clientMod={}", queryFirstChar, OWFGetBuildLabel(), AssetDownloader::Instance->GetCacheManifestHash()->GetText(), REDIRECTOR_NAME);
+		newURL += std::format("{}buildLabel={}/{}&clientMod={}", queryFirstChar, OWFGetRealBuildLabel(), AssetDownloader::Instance->GetCacheManifestHash()->GetText(), REDIRECTOR_NAME);
 	else if (newURL.find("worldState.php") != std::string::npos)
-		newURL += std::format("{}buildLabel={}/{}", queryFirstChar, OWFGetBuildLabel(), AssetDownloader::Instance->GetCacheManifestHash()->GetText());
+		newURL += std::format("{}buildLabel={}/{}", queryFirstChar, OWFGetRealBuildLabel(), AssetDownloader::Instance->GetCacheManifestHash()->GetText());
 	else if (newURL.find("inventory.php") != std::string::npos || newURL.find("missionInventoryUpdate.php") != std::string::npos)
 		newURL += std::format("{}xpBasedLevelCapDisabled=1", queryFirstChar);
 
@@ -457,7 +456,7 @@ void PlaceHooks()
 	MH_CreateHook((char*)(((ULONG_PTR)sendGetRequest[1] - 0x23) & 0xFFFFFFFFFFFFFFF0), NEW_SendGetRequest_2, (LPVOID*)&OLD_SendGetRequest_2);
 
 	// constructor for ResourceMgr
-	unsigned char* resourceMgrCtor = SignatureScanMustSucceed("\x80\x61\x58\x80\x48\x8D\x05", "xxxxxxx", imageBase, g_WarframePESize, "ResourceMgr::ctor");
+	unsigned char* resourceMgrCtor = SignatureScanMustSucceed("\x80\x61\x00\x80\x48\x8D\x05", "xx?xxxx", imageBase, g_WarframePESize, "ResourceMgr::ctor");
 	resourceMgrCtor = (unsigned char*)(((ULONG_PTR)resourceMgrCtor - 5) & 0xFFFFFFFFFFFFFFF0);
 	MH_CreateHook(resourceMgrCtor, NEW_ResourceMgr_Ctor, (LPVOID*)&OLD_ResourceMgr_Ctor);
 
@@ -467,12 +466,26 @@ void PlaceHooks()
 	buildLabelSig += 5;
 	g_BuildLabelStringPtr = (const char*)buildLabelSig;
 
-	unsigned char* initStringFromBytesSig = SignatureScanMustSucceed<true>("\x48\x8D\x15\x00\x00\x00\x00\x48\x8D\x0D\x00\x00\x00\x00\xE8\x00\x00\x00\x00\x48\x8D\x15\x00\x00\x00\x00\x48\x8D\x0D\x00\x00\x00\x00\xE8\x00\x00\x00\x00\x48\x8D\x15\x00\x00\x00\x00\x48\x8D\x0D\x00\x00\x00\x00\xE8\x00\x00\x00\x00\x48\x8D\x15\x00\x00\x00\x00\x48\x8D\x0D\x00\x00\x00\x00\xE8\x00\x00\x00\x00\x48\x8D\x15\x00\x00\x00\x00\x48\x8D\x0D\x00\x00\x00\x00\xE8\x00\x00\x00\x00\x48\x8D\x15\x00\x00\x00\x00\x48\x8D\x0D\x00\x00\x00\x00\xE8\x00\x00\x00\x00\x48\x8D\x15\x00\x00\x00\x00\x48\x8D\x0D\x00\x00\x00\x00\xE8\x00\x00\x00\x00\x48\x8D\x15\x00\x00\x00\x00\x48\x8D\x0D\x00\x00\x00\x00\xE8\x00\x00\x00\x00",
-		"xxx????xxx????x????xxx????xxx????x????xxx????xxx????x????xxx????xxx????x????xxx????xxx????x????xxx????xxx????x????xxx????xxx????x????xxx????xxx????x????", imageBase, g_WarframePESize, "InitStringFromBytes");
-	initStringFromBytesSig += 15;
-	initStringFromBytesSig += *(int*)initStringFromBytesSig;
-	initStringFromBytesSig += 4;
-	InitStringFromBytes = (decltype(InitStringFromBytes))initStringFromBytesSig;
+	std::vector<unsigned char*> initStringFromBytesSigs = SignatureScan("\x48\x8D\x15\x00\x00\x00\x00\x48\x8D\x0D\x00\x00\x00\x00\xE8\x00\x00\x00\x00\x48\x8D\x15\x00\x00\x00\x00\x48\x8D\x0D\x00\x00\x00\x00\xE8\x00\x00\x00\x00\x48\x8D\x15\x00\x00\x00\x00\x48\x8D\x0D\x00\x00\x00\x00\xE8\x00\x00\x00\x00\x48\x8D\x15\x00\x00\x00\x00\x48\x8D\x0D\x00\x00\x00\x00\xE8\x00\x00\x00\x00\x48\x8D\x15\x00\x00\x00\x00\x48\x8D\x0D\x00\x00\x00\x00\xE8\x00\x00\x00\x00\x48\x8D\x15\x00\x00\x00\x00\x48\x8D\x0D\x00\x00\x00\x00\xE8\x00\x00\x00\x00\x48\x8D\x15\x00\x00\x00\x00\x48\x8D\x0D\x00\x00\x00\x00\xE8\x00\x00\x00\x00\x48\x8D\x15\x00\x00\x00\x00\x48\x8D\x0D\x00\x00\x00\x00\xE8\x00\x00\x00\x00",
+		"xxx????xxx????x????xxx????xxx????x????xxx????xxx????x????xxx????xxx????x????xxx????xxx????x????xxx????xxx????x????xxx????xxx????x????xxx????xxx????x????", imageBase, g_WarframePESize);
+	for (unsigned char* initStringFromBytesSig : initStringFromBytesSigs)
+	{
+		const char* firstString = (const char*)(initStringFromBytesSig + 7 + *(unsigned int*)(initStringFromBytesSig + 3));
+		if (firstString < (const char*)imageBase || firstString >= (const char*)imageBase + g_WarframePESize)
+			continue;
+
+		if (strcmp(firstString, "Windows") == 0)
+		{
+			initStringFromBytesSig += 15;
+			initStringFromBytesSig += *(int*)initStringFromBytesSig;
+			initStringFromBytesSig += 4;
+			InitStringFromBytes = (decltype(InitStringFromBytes))initStringFromBytesSig;
+			break;
+		}
+	}
+
+	if (InitStringFromBytes == 0)
+		FATAL_EXIT("Signature scan failed: a manual update is required.\nWhat failed: InitStringFromBytes");
 
 	unsigned char* wfFreeSig = SignatureScanMustSucceed<true>("\x48\x8B\x4C\x24\x00\x48\x85\xC9\x74\x05\xE8", "xxxx?xxxxxx", imageBase, g_WarframePESize, "WFFree");
 	wfFreeSig += 11;
