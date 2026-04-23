@@ -32,7 +32,7 @@ void LoadConfig()
 {
 	std::wstring jsonConfigFile = g_wfExeDirectory + L"OpenWF\\Client Config.json";
 
-	std::ifstream jsonFile(jsonConfigFile);
+	std::ifstream jsonFile(jsonConfigFile, std::ios::binary);
 	if (!jsonFile)
 	{
 		OWFLog("No OpenWF Enabler config file, ignoring...");

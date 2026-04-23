@@ -81,6 +81,7 @@
   <ItemGroup>
     <ClCompile Include="clr\clr.cpp" />
     <ClCompile Include="config.cpp" />
+    <ClCompile Include="diapers.cpp" />
     <ClCompile Include="game_data\asset_downloader.cpp" />
     <ClCompile Include="game_data\resources.cpp" />
     <ClCompile Include="game_data\type_mgr.cpp" />

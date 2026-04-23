@@ -55,6 +55,7 @@ void LoadConfig();
 void InitCLR();
 void LoadPropertyTextPatches();
 void PlaceHooks();
+void DisplayDiaperWarning();
 std::string OWFGetRealBuildLabel();
 
 __declspec(noreturn) void OpenWFFatalExit(const std::string& reason, const std::string& func, const std::string& file, int line);

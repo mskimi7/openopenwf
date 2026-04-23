@@ -90,7 +90,19 @@ void InitCLR()
 
 	wcscpy(PathFindFileNameW(dllPath), L"openopenclrrel.dll"); // release build (merged with ilrepack)
 	if (!FileExists(dllPath))
+	{
+		OWFLogColor(14, "openopenclrrel.dll (release build) not found, trying openopenclr.dll (debug build)\n");
 		wcscpy(PathFindFileNameW(dllPath), L"openopenclr.dll"); // dev build
+
+		if (!FileExists(dllPath))
+		{
+			OWFLogColor(12, "CLR component (openopenclrrel.dll) not found! ");
+			OWFLogColor(14, "The tool will be restricted to basic functionality only.\n");
+
+			g_Config.disableCLR = true;
+			return;
+		}
+	}
 
 	ICLRMetaHost* clrMetaHost = nullptr;
 	HRESULT hResult = CLRCreateInstance(CLSID_CLRMetaHost, IID_PPV_ARGS(&clrMetaHost));

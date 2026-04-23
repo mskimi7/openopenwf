@@ -15,6 +15,7 @@ static decltype(&NotifyWinEvent) OLD_NotifyWinEvent;
 static decltype(&WriteFile) OLD_WriteFile;
 static void* (*OLD_GameUpdate)(void*);
 static int (*OLD_DownloadManifest)(AssetDownloader*, void*, void*, void*, void*, void*);
+static void (*OLD_LoginCallback)(void*, bool, WarframeString*);
 static int (*OLD_X509_verify_cert)(void*);
 static long long (*OLD_Curl_ossl_verifyhost)(void*, void*, void*, void*);
 static int (*OLD_WorldStateVerify)(void*, void*);
@@ -32,7 +33,8 @@ static void* (*OLD_ResourceMgr_Ctor)(ResourceMgr*);
 
 void WarframeString::Create(const std::string& data)
 {
-	InitStringFromBytes(this, data.c_str());
+	InitStringFromBytes(this, std::string(data.size(), ' ').c_str());
+	memcpy(this->GetPtr(), data.data(), data.size()); // this is needed to support strings with embedded NULs
 }
 
 void WarframeString::Free()
@@ -60,7 +62,9 @@ static std::string ReplaceURLHost(const std::string& origURL)
 		replacementPort = g_Config.httpsPort == 443 ? -1 : g_Config.httpsPort;
 	}
 	else
+	{
 		return origURL;
+	}
 
 	size_t endReplaceIdx = origURL.find('/', startReplaceIdx);
 	if (endReplaceIdx == std::string::npos)
@@ -176,6 +180,14 @@ static int NEW_rsa_ossl_public_encrypt(int flen, unsigned char* from, unsigned c
 	}
 
 	return OLD_rsa_ossl_public_encrypt(flen, from, to, rsa, padding);
+}
+
+static void NEW_LoginCallback(void* thisPtr, bool isSuccess, WarframeString* response)
+{
+	if (!isSuccess && response->GetText().find("change your diapers"s) != std::string::npos)
+		CreateThread(nullptr, 0, [](LPVOID arg) -> DWORD { DisplayDiaperWarning(); return 0; }, nullptr, 0, nullptr);
+
+	return OLD_LoginCallback(thisPtr, isSuccess, response);
 }
 
 static std::string ModifyURLForOpenWF(const std::string& url)
@@ -425,6 +437,11 @@ void PlaceHooks()
 	unsigned char* verifyHostSig = SignatureScanMustSucceed("\x49\x8B\x18\x4C\x8B\xF9\x45\x33\xE4", "xxxxxxxxx", imageBase, g_WarframePESize, "Curl_ossl_verifyhost");
 	verifyHostSig = (unsigned char*)(((ULONG_PTR)verifyHostSig - 0x14) & 0xFFFFFFFFFFFFFFF0);
 	MH_CreateHook(verifyHostSig, NEW_Curl_ossl_verifyhost, (LPVOID*)&OLD_Curl_ossl_verifyhost);
+
+	// login callback
+	unsigned char* loginCallbackSig = SignatureScanMustSucceed("\x40\x55\x53\x56\x57\x00\x00\x48\x8D\xAC\x24\x00\xDE\xFF\xFF", "xxxxx??xxxx?xxx", imageBase, g_WarframePESize, "LoginCallback");
+	loginCallbackSig = (unsigned char*)((ULONG_PTR)loginCallbackSig & 0xFFFFFFFFFFFFFFF0);
+	MH_CreateHook(loginCallbackSig, NEW_LoginCallback, (LPVOID*)&OLD_LoginCallback);
 
 	// WorldState signature verification
 	unsigned char* worldStateVerifySig = SignatureScanMustSucceed("\x48\x89\x45\xF0\x48\x8B\x00\x84\xD2\x0F\x84\x00\x00\x00\x00\x48\x8D\x15", "xxxxxx?xxxx??xxxxx", imageBase, g_WarframePESize, "WorldStateVerify");
