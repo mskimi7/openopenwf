@@ -159,6 +159,9 @@ static LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 static void FillDefaults()
 {
 	HANDLE hDll = CreateFileW(L"openopenwf.dll", GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, 0, nullptr);
+	if (hDll == INVALID_HANDLE_VALUE)
+		hDll = CreateFileW(g_altLibraryPath.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, 0, nullptr);
+
 	if (hDll != INVALID_HANDLE_VALUE)
 	{
 		wchar_t dllFullPath[512];
@@ -170,6 +173,8 @@ static void FillDefaults()
 
 			SetWindowTextW(dllTextbox, dllFullPathStr.c_str());
 		}
+
+		CloseHandle(hDll);
 	}
 
 	std::optional<std::wstring> languageSetting, voSetting;

@@ -13,6 +13,7 @@
 #include <optional>
 
 inline std::wstring g_configFilePath;
+inline std::wstring g_altLibraryPath;
 
 struct LaunchSettings {
 	std::wstring warframeExePath;

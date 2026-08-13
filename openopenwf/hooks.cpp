@@ -439,7 +439,7 @@ void PlaceHooks()
 	MH_CreateHook(verifyHostSig, NEW_Curl_ossl_verifyhost, (LPVOID*)&OLD_Curl_ossl_verifyhost);
 
 	// login callback
-	unsigned char* loginCallbackSig = SignatureScanMustSucceed("\x40\x55\x53\x56\x57\x00\x00\x48\x8D\xAC\x24\x00\xDE\xFF\xFF", "xxxxx??xxxx?xxx", imageBase, g_WarframePESize, "LoginCallback");
+	unsigned char* loginCallbackSig = SignatureScanMustSucceed("\x48\x8B\x00\x84\xD2\x0F\x85\x00\x00\x00\x00\xB2\x03\x48\x8D\x00\x00\x00\x00\x00\xE8\x00\x00\x00\x00\x41\x00\x0E", "xx?xxxx????xxxx?????x????x?x", imageBase, g_WarframePESize, "LoginCallback");
 	loginCallbackSig = (unsigned char*)((ULONG_PTR)loginCallbackSig & 0xFFFFFFFFFFFFFFF0);
 	MH_CreateHook(loginCallbackSig, NEW_LoginCallback, (LPVOID*)&OLD_LoginCallback);
 

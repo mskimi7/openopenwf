@@ -8,6 +8,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	{
 		wchar_t* fileName = PathFindFileNameW(processName);
 		g_configFilePath = std::wstring(processName, fileName - processName) + L"oowf_launch.cfg";
+		g_altLibraryPath = std::wstring(processName, fileName - processName) + L"openopenwf.dll";
 	}
 
 	CreateLaunchDialog();
